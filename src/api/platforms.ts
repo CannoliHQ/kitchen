@@ -41,8 +41,6 @@ export const PLATFORM_NAMES: Record<string, string> = {
   DOS: 'DOS',
   SCUMMVM: 'ScummVM',
   AMIGA: 'Amiga',
-  AMIGA500: 'Amiga 500',
-  AMIGA1200: 'Amiga 1200',
   PS2: 'PlayStation 2',
   GC: 'GameCube',
   WII: 'Wii',
@@ -51,6 +49,50 @@ export const PLATFORM_NAMES: Record<string, string> = {
   PSVITA: 'PS Vita',
   PS3: 'PlayStation 3',
   NSW: 'Nintendo Switch',
+}
+
+const PLATFORM_GROUPS: Record<string, string[]> = {
+  Nintendo: ['NES', 'FDS', 'SNES', 'N64', 'GB', 'GBC', 'GBA', 'NDS', '3DS', 'VIRTUALBOY', 'POKEMINI', 'GC', 'WII', 'WIIU', 'NSW'],
+  Sega: ['SMS', 'GG', 'MD', 'SG1000', '32X', 'SEGACD', 'SATURN', 'DC'],
+  Sony: ['PS', 'PS2', 'PS3', 'PSP', 'PSVITA'],
+  Atari: ['ATARI2600', 'ATARI5200', 'ATARI7800', 'LYNX', 'JAGUAR'],
+  NEC: ['PCE', 'PCFX', 'SUPERGRAFX'],
+  SNK: ['NEOGEO', 'NGP', 'NGPC'],
+  Bandai: ['WS', 'WSC'],
+  Arcade: ['MAME', 'FBN'],
+  Computer: ['DOS', 'SCUMMVM', 'AMIGA'],
+  Other: ['COLECOVISION', 'VECTREX', 'INTELLIVISION'],
+}
+
+/** All tags that belong to a known group */
+const GROUPED_TAGS = new Set(Object.values(PLATFORM_GROUPS).flat())
+
+export interface PlatformGroup {
+  name: string
+  tags: string[]
+}
+
+/** Group a list of active tags by manufacturer. Unknown tags go into "Other". Alphabetized within each group. */
+export function groupPlatforms(tags: string[]): PlatformGroup[] {
+  const groups: PlatformGroup[] = []
+  const byName = (a: string, b: string) => platformName(a).localeCompare(platformName(b))
+
+  for (const [name, groupTags] of Object.entries(PLATFORM_GROUPS)) {
+    const matched = groupTags.filter(t => tags.includes(t)).sort(byName)
+    if (matched.length) groups.push({ name, tags: matched })
+  }
+
+  // Any tags not in a known group
+  const ungrouped = tags.filter(t => !GROUPED_TAGS.has(t)).sort(byName)
+  if (ungrouped.length) groups.push({ name: 'Other', tags: ungrouped })
+
+  return groups
+}
+
+/** Returns the path to a platform icon SVG, or undefined if unknown. */
+export function platformIcon(tag: string): string | undefined {
+  if (PLATFORM_NAMES[tag]) return `/platforms/${tag}.svg`
+  return undefined
 }
 
 export function platformName(tag: string): string {

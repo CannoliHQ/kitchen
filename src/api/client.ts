@@ -34,6 +34,11 @@ export function clearCredentials() {
   baseUrl.value = ''
 }
 
+function buildPath(resource: string, ...segments: (string | undefined)[]): string {
+  const encoded = [resource, ...segments.filter(Boolean)].map(p => encodeURIComponent(p!))
+  return `/api/${encoded.join('/')}`
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(`${baseUrl.value}${path}`, {
     ...init,
@@ -60,26 +65,31 @@ export async function getTags(): Promise<string[]> {
   return data.tags
 }
 
-export async function listFiles(resource: string, tag?: string): Promise<ListResponse> {
-  const path = tag ? `/api/${resource}/${encodeURIComponent(tag)}` : `/api/${resource}`
+export async function listFiles(resource: string, ...subpath: (string | undefined)[]): Promise<ListResponse> {
+  const path = buildPath(resource, ...subpath)
   const res = await request(path)
+  return res.json()
+}
+
+export async function createFolder(resource: string, ...subpath: (string | undefined)[]): Promise<{ ok: boolean }> {
+  const path = buildPath(resource, ...subpath)
+  const res = await request(path, { method: 'PUT' })
   return res.json()
 }
 
 export async function uploadFiles(
   resource: string,
-  tag: string | undefined,
+  subpath: string[],
   files: File[],
   onProgress?: (pct: number) => void,
 ): Promise<{ ok: boolean; files: string[] }> {
-  const path = tag ? `/api/${resource}/${encodeURIComponent(tag)}` : `/api/${resource}`
+  const path = buildPath(resource, ...subpath)
 
   const formData = new FormData()
   for (const file of files) {
     formData.append('file', file, file.name)
   }
 
-  // Use XMLHttpRequest for progress tracking
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${baseUrl.value}${path}`)

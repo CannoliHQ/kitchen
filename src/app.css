@@ -12,8 +12,8 @@
   --color-primary-foreground: #1a1a2e;
   --color-muted: #2a2a48;
   --color-muted-foreground: #9a8e7a;
-  --color-border: #3a3a58;
-  --color-input: #3a3a58;
+  --color-border: #2e2e50;
+  --color-input: #2e2e50;
   --color-ring: #4a9ab5;
   --color-destructive: #c45050;
   --color-accent: #d9a06a;
@@ -31,3 +31,4 @@ body {
   @apply bg-background text-foreground antialiased;
   font-family: Inter, system-ui, -apple-system, sans-serif;
 }
+

@@ -13,18 +13,18 @@ const props = withDefaults(defineProps<{
 
 const classes = computed(() =>
   cn(
-    'inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
+    'inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
     {
-      'bg-primary text-primary-foreground hover:bg-primary/90': props.variant === 'default',
-      'border border-border bg-transparent hover:bg-accent': props.variant === 'outline',
-      'hover:bg-accent': props.variant === 'ghost',
-      'bg-destructive text-foreground hover:bg-destructive/90': props.variant === 'destructive',
+      'bg-accent text-accent-foreground shadow-sm hover:bg-tan-light active:scale-[0.97]': props.variant === 'default',
+      'border border-border bg-transparent hover:bg-muted hover:border-muted-foreground/30 active:scale-[0.97]': props.variant === 'outline',
+      'hover:bg-muted text-muted-foreground hover:text-foreground': props.variant === 'ghost',
+      'bg-destructive text-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.97]': props.variant === 'destructive',
     },
     {
-      'h-10 px-4 py-2': props.size === 'default',
+      'h-10 px-5 py-2': props.size === 'default',
       'h-8 px-3 text-xs': props.size === 'sm',
-      'h-12 px-6': props.size === 'lg',
-      'h-10 w-10': props.size === 'icon',
+      'h-12 px-6 text-base': props.size === 'lg',
+      'h-9 w-9 rounded-lg': props.size === 'icon',
     },
   ),
 )
