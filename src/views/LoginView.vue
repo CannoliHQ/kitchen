@@ -110,7 +110,7 @@ function onPaste(event: ClipboardEvent) {
       <div class="space-y-3">
         <div v-if="showHost" class="space-y-2">
           <label class="text-sm font-medium" for="host">Device address</label>
-          <Input id="host" v-model="host" placeholder="192.168.1.x:1091" />
+          <Input id="host" v-model="host" placeholder="IP:1091" />
         </div>
 
         <div class="space-y-2">
