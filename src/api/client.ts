@@ -77,12 +77,50 @@ export async function createFolder(resource: string, ...subpath: (string | undef
   return res.json()
 }
 
-export async function uploadFiles(
+export async function moveFile(resource: string, fromSegments: string[], to: string): Promise<{ ok: boolean }> {
+  const path = buildPath(resource, ...fromSegments)
+  const res = await request(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to }),
+  })
+  return res.json()
+}
+
+export interface ArtEntry {
+  name: string
+  file: string
+  size: number
+}
+
+export async function getArtworkIndex(tag: string): Promise<ArtEntry[]> {
+  const path = `/api/artwork/${encodeURIComponent(tag)}`
+  const res = await request(path)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.art ?? []
+}
+
+export async function getArtworkBlob(tag: string, name: string): Promise<string | null> {
+  const path = `/api/artwork/${encodeURIComponent(tag)}/${encodeURIComponent(name)}`
+  const res = await request(path)
+  if (!res.ok) return null
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
+
+export async function deleteFile(resource: string, ...subpath: (string | undefined)[]): Promise<{ ok: boolean }> {
+  const path = buildPath(resource, ...subpath)
+  const res = await request(path, { method: 'DELETE' })
+  return res.json()
+}
+
+export function uploadFiles(
   resource: string,
   subpath: string[],
   files: File[],
   onProgress?: (pct: number) => void,
-): Promise<{ ok: boolean; files: string[] }> {
+): { promise: Promise<{ ok: boolean; files: string[] }>; abort: () => void } {
   const path = buildPath(resource, ...subpath)
 
   const formData = new FormData()
@@ -90,8 +128,9 @@ export async function uploadFiles(
     formData.append('file', file, file.name)
   }
 
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
+  const xhr = new XMLHttpRequest()
+
+  const promise = new Promise<{ ok: boolean; files: string[] }>((resolve, reject) => {
     xhr.open('POST', `${baseUrl.value}${path}`)
     xhr.setRequestHeader('Authorization', `Basic ${token.value}`)
 
@@ -110,6 +149,9 @@ export async function uploadFiles(
     })
 
     xhr.addEventListener('error', () => reject(new Error('Upload failed')))
+    xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')))
     xhr.send(formData)
   })
+
+  return { promise, abort: () => xhr.abort() }
 }
