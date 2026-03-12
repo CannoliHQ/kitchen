@@ -6,7 +6,7 @@ import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, X, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -212,7 +212,7 @@ async function doUpload(files: globalThis.File[]) {
   uploadProgress.value = 0
   uploadResult.value = []
   uploadFileNames.value = files.length === 1
-    ? files[0].name
+    ? files[0]!.name
     : `${files.length} files`
   const { promise, abort } = uploadFiles(
     props.resource,
