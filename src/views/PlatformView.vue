@@ -16,7 +16,7 @@ const resources = [
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl p-6 space-y-8">
+  <div class="mx-auto max-w-6xl p-6 space-y-8">
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard' })">
         <ArrowLeft class="h-5 w-5" />
@@ -24,7 +24,7 @@ const resources = [
       <h1 class="text-2xl font-bold tracking-tight">{{ platformLabel(props.tag) }}</h1>
     </div>
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       <div
         v-for="res in resources"
         :key="res.key"

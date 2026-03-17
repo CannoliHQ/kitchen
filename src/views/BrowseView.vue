@@ -364,7 +364,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl p-6 space-y-6">
+  <div class="mx-auto max-w-6xl p-6 space-y-6">
     <!-- Header -->
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="goBack">
@@ -496,7 +496,7 @@ onMounted(load)
       </div>
 
       <!-- ROM cards with art -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         <div
           v-for="entry in romEntries"
           :key="entry.name"
