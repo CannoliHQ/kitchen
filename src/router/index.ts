@@ -1,12 +1,12 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
-import { isAuthenticated } from '@/api/client'
+import { createRouter, createWebHistory } from 'vue-router'
+import { isAuthenticated, restoreCredentials, setUnauthorizedHandler } from '@/api/client'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import PlatformView from '@/views/PlatformView.vue'
 import BrowseView from '@/views/BrowseView.vue'
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes: [
     { path: '/', name: 'login', component: LoginView },
     { path: '/dashboard', name: 'dashboard', component: DashboardView },
@@ -18,8 +18,14 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (to.name !== 'login' && !isAuthenticated()) {
-    return { name: 'login' }
+    if (!restoreCredentials()) {
+      return { name: 'login' }
+    }
   }
+})
+
+setUnauthorizedHandler(() => {
+  router.push({ name: 'login' })
 })
 
 export default router

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { setCredentials, getInfo } from '@/api/client'
+import { setCredentials, getInfo, clearCredentials } from '@/api/client'
 import Card from '@/components/ui/Card.vue'
 
 const router = useRouter()
@@ -17,7 +17,7 @@ const octets = ref<string[]>(servedFromDevice
 const digits = ref<string[]>(Array(6).fill(''))
 const octetRefs = ref<HTMLInputElement[]>([])
 const digitRefs = ref<HTMLInputElement[]>([])
-const error = ref('')
+const pinError = ref(false)
 const loading = ref(false)
 const showHost = ref(!servedFromDevice)
 
@@ -41,11 +41,48 @@ function parseHostParam(raw: string) {
   }
 }
 
+function getPinParam(): string | null {
+  const fromRoute = route.query.pin as string | undefined
+  if (fromRoute) return fromRoute
+  return new URLSearchParams(window.location.search).get('pin')
+}
+
 onMounted(() => {
   const hostParam = getHostParam()
   if (hostParam) {
     parseHostParam(hostParam)
-    window.history.replaceState({}, '', window.location.pathname + window.location.hash)
+  }
+
+  const pinParam = getPinParam()
+  if (pinParam) {
+    const chars = pinParam.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6).split('')
+    digits.value = [...chars, ...Array(6 - chars.length).fill('')]
+  }
+
+  // Clean query params from URL
+  if (hostParam || pinParam) {
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
+  // Auto-connect if both host and full pin are provided via query params
+  if (hostParam && pinParam && digits.value.join('').length === 6) {
+    nextTick(() => connect())
+    return
+  }
+
+  // Try restoring saved credentials from localStorage
+  const savedHost = localStorage.getItem('cannoli_host')
+  const savedPin = localStorage.getItem('cannoli_pin')
+  if (savedHost && !hostParam) {
+    parseHostParam(savedHost)
+  }
+  if (savedHost && savedPin && !hostParam && !pinParam) {
+    const chars = savedPin.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6).split('')
+    digits.value = [...chars, ...Array(6 - chars.length).fill('')]
+    if (digits.value.join('').length === 6) {
+      nextTick(() => connect())
+      return
+    }
   }
 
   nextTick(() => {
@@ -118,17 +155,18 @@ async function connect() {
   const pin = digits.value.join('')
   if (pin.length < 6) return
 
-  error.value = ''
   loading.value = true
   try {
     setCredentials(host.value, pin)
     await getInfo()
     router.push({ name: 'dashboard' })
   } catch {
-    error.value = 'Could not connect. Check the address and PIN.'
+    clearCredentials()
+    pinError.value = true
     digits.value = Array(6).fill('')
     loading.value = false
     nextTick(() => digitRefs.value[0]?.focus())
+    setTimeout(() => { pinError.value = false }, 600)
   }
 }
 
@@ -175,7 +213,7 @@ function onDigitPaste(event: ClipboardEvent) {
       <div class="space-y-3 text-center">
         <img src="/logo.png" alt="Cannoli" class="mx-auto h-16 w-auto" />
         <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
-        <p class="text-sm text-muted-foreground">Connect to your device</p>
+        <p class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
       </div>
 
       <div class="space-y-5">
@@ -202,8 +240,7 @@ function onDigitPaste(event: ClipboardEvent) {
 
         <!-- PIN -->
         <div class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center block">PIN Code</label>
-          <div class="flex justify-center gap-2" @paste="onDigitPaste">
+          <div class="flex justify-center gap-2" :class="{ 'animate-shake': pinError }" @paste="onDigitPaste">
             <input
               v-for="(_, i) in 6"
               :key="i"
@@ -213,16 +250,27 @@ function onDigitPaste(event: ClipboardEvent) {
               maxlength="2"
               :value="digits[i]"
               :disabled="loading"
-              class="h-12 w-12 border border-input bg-background text-center text-lg font-mono font-bold text-foreground uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              class="h-12 w-12 border bg-background text-center text-lg font-mono font-bold text-foreground uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-colors"
+              :class="pinError ? 'border-destructive' : 'border-input'"
               @input="onDigitInput(i, $event)"
               @keydown="onDigitKeydown(i, $event)"
             />
           </div>
         </div>
-
-        <p v-if="error" class="text-sm text-destructive text-center">{{ error }}</p>
-        <p v-if="loading" class="text-sm text-muted-foreground text-center">Connecting...</p>
       </div>
     </Card>
   </div>
 </template>
+
+<style scoped>
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+</style>

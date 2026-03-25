@@ -128,7 +128,7 @@ function disconnect() {
       Platform icons courtesy of
       <a href="https://github.com/rommapp/romm" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">RomM</a>
       (AGPL-3.0) and
-      <a href="https://git.libretro.com/libretro-assets/retroarch-assets" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Libretro</a>
+      <a href="https://git.libretro.com/libretro-assets/retroarch-assets" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Libretro</a><br />
       (CC BY 4.0). All trademarks are property of their respective owners.
     </footer>
   </div>

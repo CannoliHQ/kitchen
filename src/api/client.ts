@@ -14,11 +14,29 @@ export interface ListResponse {
 const token = ref('')
 const baseUrl = ref('')
 
+let onUnauthorized: (() => void) | null = null
+
+export function setUnauthorizedHandler(handler: () => void) {
+  onUnauthorized = handler
+}
+
 export function setCredentials(host: string, pin: string) {
   const bare = host.replace(/^https?:\/\//, '').replace(/\/$/, '')
   const withPort = bare.includes(':') ? bare : `${bare}:1091`
   baseUrl.value = `http://${withPort}`
   token.value = btoa(`nonna:${pin}`)
+  localStorage.setItem('cannoli_host', host)
+  localStorage.setItem('cannoli_pin', pin)
+}
+
+export function restoreCredentials(): boolean {
+  const host = localStorage.getItem('cannoli_host')
+  const pin = localStorage.getItem('cannoli_pin')
+  if (host && pin) {
+    setCredentials(host, pin)
+    return true
+  }
+  return false
 }
 
 export function getBaseUrl() {
@@ -32,6 +50,7 @@ export function isAuthenticated() {
 export function clearCredentials() {
   token.value = ''
   baseUrl.value = ''
+  localStorage.removeItem('cannoli_pin')
 }
 
 function buildPath(resource: string, ...segments: (string | undefined)[]): string {
@@ -49,6 +68,7 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   })
   if (res.status === 401) {
     clearCredentials()
+    onUnauthorized?.()
     throw new Error('Unauthorized')
   }
   return res
