@@ -6,7 +6,7 @@ import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, BookOpen } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -39,6 +39,7 @@ const renameValue = ref('')
 const renameError = ref('')
 const artInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
 const artBlobUrls = ref<Map<string, string>>(new Map())
+const guideInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
 
 /** Current subpath segments parsed from route query */
 const subpath = computed<string[]>(() => {
@@ -54,6 +55,7 @@ const resourceLabel = computed(() => {
   const labels: Record<string, string> = {
     roms: 'ROMs', art: 'Box Art', saves: 'Saves',
     states: 'Save States', bios: 'BIOS', wallpapers: 'Wallpapers',
+    guides: 'Guides',
   }
   return labels[props.resource] ?? props.resource
 })
@@ -157,6 +159,30 @@ async function handleArtUpload(romName: string, event: Event) {
   input.value = ''
 }
 
+function triggerGuideUpload(romName: string) {
+  const input = guideInputRefs.value.get(romName)
+  input?.click()
+}
+
+function setGuideInputRef(el: unknown, romName: string) {
+  if (el instanceof HTMLInputElement) guideInputRefs.value.set(romName, el)
+}
+
+async function handleGuideUpload(romName: string, event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || !props.tag) return
+
+  const gameName = stripExtension(romName)
+  const { promise } = uploadFiles('guides', [props.tag, gameName], [file])
+  try {
+    await promise
+  } catch {
+    // upload failed
+  }
+  input.value = ''
+}
+
 function formatSize(bytes: number): string {
   if (bytes === 0) return ''
   const units = ['B', 'KB', 'MB', 'GB']
@@ -169,6 +195,8 @@ async function load(showLoading = true) {
   try {
     const data = await listFiles(props.resource, ...apiSegments.value)
     entries.value = data.entries
+  } catch {
+    entries.value = []
   } finally {
     loading.value = false
   }
@@ -525,6 +553,12 @@ onMounted(load)
               class="hidden"
               @change="handleArtUpload(entry.name, $event)"
             />
+            <input
+              :ref="(el) => setGuideInputRef(el, entry.name)"
+              type="file"
+              class="hidden"
+              @change="handleGuideUpload(entry.name, $event)"
+            />
           </div>
           <!-- Info -->
           <div class="px-3 pt-3 pb-2 space-y-1">
@@ -546,6 +580,12 @@ onMounted(load)
               @click.stop="triggerArtUpload(entry.name)"
             >
               <ImagePlus class="h-4 w-4" />
+            </button>
+            <button
+              class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50 border-l border-border"
+              @click.stop="triggerGuideUpload(entry.name)"
+            >
+              <BookOpen class="h-4 w-4" />
             </button>
             <button
               class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50 border-l border-border"

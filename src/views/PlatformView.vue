@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router'
 import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
-import { ArrowLeft, Gamepad2, Image, Save, Clock } from 'lucide-vue-next'
+import { ArrowLeft, Gamepad2, Image, Save, Clock, BookOpen } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string }>()
 const router = useRouter()
@@ -12,6 +12,7 @@ const resources = [
   { key: 'art', label: 'Box Art', icon: Image },
   { key: 'saves', label: 'Saves', icon: Save },
   { key: 'states', label: 'Save States', icon: Clock },
+  { key: 'guides', label: 'Guides', icon: BookOpen },
 ]
 </script>
 
