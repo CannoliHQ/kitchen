@@ -40,6 +40,7 @@ const renameError = ref('')
 const artInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
 const artBlobUrls = ref<Map<string, string>>(new Map())
 const guideInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
+const guideUploaded = ref<Set<string>>(new Set())
 
 /** Current subpath segments parsed from route query */
 const subpath = computed<string[]>(() => {
@@ -177,6 +178,14 @@ async function handleGuideUpload(romName: string, event: Event) {
   const { promise } = uploadFiles('guides', [props.tag, gameName], [file])
   try {
     await promise
+    const updated = new Set(guideUploaded.value)
+    updated.add(romName)
+    guideUploaded.value = updated
+    setTimeout(() => {
+      const reverted = new Set(guideUploaded.value)
+      reverted.delete(romName)
+      guideUploaded.value = reverted
+    }, 2000)
   } catch {
     // upload failed
   }
@@ -418,7 +427,7 @@ onMounted(load)
     </div>
 
     <!-- Actions bar -->
-    <div class="flex items-center gap-2">
+    <div v-if="props.resource !== 'guides'" class="flex items-center gap-2">
       <Button variant="outline" size="sm" @click="showNewFolder = !showNewFolder">
         <FolderPlus class="h-4 w-4" />
         New folder
@@ -528,7 +537,7 @@ onMounted(load)
         <div
           v-for="entry in romEntries"
           :key="entry.name"
-          class="rounded-xl border border-border bg-card overflow-hidden hover:border-accent/50 hover:shadow-md hover:shadow-accent/5"
+          class="rounded-xl border border-border bg-card overflow-hidden hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 flex flex-col"
         >
           <!-- Art image -->
           <div class="aspect-square bg-muted flex items-center justify-center overflow-hidden relative">
@@ -561,12 +570,12 @@ onMounted(load)
             />
           </div>
           <!-- Info -->
-          <div class="px-3 pt-3 pb-2 space-y-1">
+          <div class="px-3 pt-3 pb-2 space-y-1 flex-1">
             <p class="text-base font-semibold leading-snug break-words">{{ stripExtension(entry.name) }}</p>
             <p class="text-xs text-muted-foreground">{{ formatSize(entry.size) }}</p>
           </div>
           <!-- Action bar -->
-          <div class="flex items-center border-t border-border">
+          <div class="flex items-center border-t border-border mt-auto">
             <button
               v-if="getArtUrl(entry.name)"
               class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50"
@@ -582,10 +591,12 @@ onMounted(load)
               <ImagePlus class="h-4 w-4" />
             </button>
             <button
-              class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50 border-l border-border"
+              class="flex-1 flex items-center justify-center py-2 border-l border-border"
+              :class="guideUploaded.has(entry.name) ? 'text-accent' : 'text-muted-foreground hover:text-accent hover:bg-muted/50'"
               @click.stop="triggerGuideUpload(entry.name)"
             >
-              <BookOpen class="h-4 w-4" />
+              <CheckCircle v-if="guideUploaded.has(entry.name)" class="h-4 w-4" />
+              <BookOpen v-else class="h-4 w-4" />
             </button>
             <button
               class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50 border-l border-border"

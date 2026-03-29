@@ -66,7 +66,7 @@ onMounted(() => {
 
   // Auto-connect if both host and full pin are provided via query params
   if (hostParam && pinParam && digits.value.join('').length === 6) {
-    nextTick(() => connect())
+    nextTick(() => connect(true))
     return
   }
 
@@ -80,7 +80,7 @@ onMounted(() => {
     const chars = savedPin.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6).split('')
     digits.value = [...chars, ...Array(6 - chars.length).fill('')]
     if (digits.value.join('').length === 6) {
-      nextTick(() => connect())
+      nextTick(() => connect(true))
       return
     }
   }
@@ -151,7 +151,7 @@ function setDigitRef(el: unknown, i: number) {
   if (el instanceof HTMLInputElement) digitRefs.value[i] = el
 }
 
-async function connect() {
+async function connect(silent = false) {
   const pin = digits.value.join('')
   if (pin.length < 6) return
 
@@ -162,11 +162,13 @@ async function connect() {
     router.push({ name: 'dashboard' })
   } catch {
     clearCredentials()
-    pinError.value = true
     digits.value = Array(6).fill('')
     loading.value = false
     nextTick(() => digitRefs.value[0]?.focus())
-    setTimeout(() => { pinError.value = false }, 600)
+    if (!silent) {
+      pinError.value = true
+      setTimeout(() => { pinError.value = false }, 600)
+    }
   }
 }
 
