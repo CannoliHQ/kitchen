@@ -160,12 +160,12 @@ async function connect(silent = false) {
     setCredentials(host.value, pin)
     await getInfo()
     router.push({ name: 'dashboard' })
-  } catch {
+  } catch (err) {
     clearCredentials()
     digits.value = Array(6).fill('')
     loading.value = false
     nextTick(() => digitRefs.value[0]?.focus())
-    if (!silent) {
+    if (!silent && err instanceof Error && err.message === 'Unauthorized') {
       pinError.value = true
       setTimeout(() => { pinError.value = false }, 600)
     }
