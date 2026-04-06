@@ -23,14 +23,9 @@ const filteredTags = computed(() => {
   )
 })
 
-const groups = computed<PlatformGroup[]>(() => groupPlatforms(filteredTags.value))
+const groups = computed<PlatformGroup[]>(() => groupPlatforms(filteredTags.value, false))
 
-const alphabeticalGroups = computed<PlatformGroup[]>(() =>
-  groupPlatforms(filteredTags.value).map(g => ({
-    ...g,
-    tags: [...g.tags].sort((a, b) => platformName(a).localeCompare(platformName(b))),
-  }))
-)
+const alphabeticalGroups = computed<PlatformGroup[]>(() => groupPlatforms(filteredTags.value, true))
 
 onMounted(async () => {
   try {

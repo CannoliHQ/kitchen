@@ -72,13 +72,14 @@ export interface PlatformGroup {
   tags: string[]
 }
 
-/** Group a list of active tags by manufacturer. Unknown tags go into "Other". Alphabetized within each group. */
-export function groupPlatforms(tags: string[]): PlatformGroup[] {
+/** Group a list of active tags by manufacturer. When alphabetical, sorts within each group by name. Otherwise preserves definition order (era). */
+export function groupPlatforms(tags: string[], alphabetical = false): PlatformGroup[] {
   const groups: PlatformGroup[] = []
   const byName = (a: string, b: string) => platformName(a).localeCompare(platformName(b))
 
   for (const [name, groupTags] of Object.entries(PLATFORM_GROUPS)) {
-    const matched = groupTags.filter(t => tags.includes(t)).sort(byName)
+    const matched = groupTags.filter(t => tags.includes(t))
+    if (alphabetical) matched.sort(byName)
     if (matched.length) groups.push({ name, tags: matched })
   }
 
