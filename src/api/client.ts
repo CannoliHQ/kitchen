@@ -15,9 +15,14 @@ const token = ref('')
 const baseUrl = ref('')
 
 let onUnauthorized: (() => void) | null = null
+let onConnectionError: (() => void) | null = null
 
 export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler
+}
+
+export function setConnectionErrorHandler(handler: () => void) {
+  onConnectionError = handler
 }
 
 export function setCredentials(host: string, pin: string) {
@@ -59,13 +64,20 @@ function buildPath(resource: string, ...segments: (string | undefined)[]): strin
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
-  const res = await fetch(`${baseUrl.value}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Basic ${token.value}`,
-      ...init?.headers,
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${baseUrl.value}${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Basic ${token.value}`,
+        ...init?.headers,
+      },
+    })
+  } catch {
+    clearCredentials()
+    onConnectionError?.()
+    throw new Error('ConnectionError')
+  }
   if (res.status === 401) {
     clearCredentials()
     onUnauthorized?.()
@@ -87,6 +99,12 @@ export async function getTags(): Promise<string[]> {
 
 export async function listFiles(resource: string, ...subpath: (string | undefined)[]): Promise<ListResponse> {
   const path = buildPath(resource, ...subpath)
+  const res = await request(path)
+  return res.json()
+}
+
+export async function listFilesRecursive(resource: string, ...subpath: (string | undefined)[]): Promise<ListResponse> {
+  const path = buildPath(resource, ...subpath) + '?recursive=true'
   const res = await request(path)
   return res.json()
 }

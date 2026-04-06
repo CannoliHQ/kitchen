@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated, restoreCredentials, setUnauthorizedHandler } from '@/api/client'
+import { isAuthenticated, restoreCredentials, setUnauthorizedHandler, setConnectionErrorHandler } from '@/api/client'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import PlatformView from '@/views/PlatformView.vue'
@@ -26,6 +26,10 @@ router.beforeEach((to) => {
 
 setUnauthorizedHandler(() => {
   router.push({ name: 'login' })
+})
+
+setConnectionErrorHandler(() => {
+  router.push({ name: 'login', query: { error: 'connection' } })
 })
 
 export default router

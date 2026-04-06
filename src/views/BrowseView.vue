@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { listFiles, uploadFiles, createFolder, deleteFile, moveFile, getArtworkIndex, getArtworkBlob, type FileEntry } from '@/api/client'
+import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, getArtworkIndex, getArtworkBlob, type FileEntry } from '@/api/client'
 import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, BookOpen } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, BookOpen, Search, Gamepad2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -41,6 +41,17 @@ const artInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
 const artBlobUrls = ref<Map<string, string>>(new Map())
 const guideInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
 const guideUploaded = ref<Set<string>>(new Set())
+const showGamePicker = ref(false)
+const gamePickerRoms = ref<string[]>([])
+const gamePickerLoading = ref(false)
+const gamePickerSearch = ref('')
+const gamePickerMode = ref<'folder' | 'upload' | 'art'>('folder')
+const pendingUploadFiles = ref<globalThis.File[]>([])
+const artPickerGame = ref<string | null>(null)
+const artPickerFile = ref<globalThis.File | null>(null)
+const artPickerInput = ref<HTMLInputElement>()
+const artPickerDragOver = ref(false)
+const bulkArtInput = ref<HTMLInputElement>()
 
 /** Current subpath segments parsed from route query */
 const subpath = computed<string[]>(() => {
@@ -62,7 +73,10 @@ const resourceLabel = computed(() => {
 })
 
 const title = computed(() => {
-  return props.tag ? `${platformLabel(props.tag)} - ${resourceLabel.value}` : resourceLabel.value
+  if ((props.resource === 'guides' || props.resource === 'states') && subpath.value.length) {
+    return `${resourceLabel.value} - ${subpath.value[subpath.value.length - 1]}`
+  }
+  return props.tag ? `${resourceLabel.value} - ${platformLabel(props.tag)}` : resourceLabel.value
 })
 
 /** Breadcrumb segments for navigation */
@@ -76,6 +90,9 @@ const breadcrumbs = computed(() => {
 
 /** True when browsing ROMs for a platform (any depth) */
 const isRomsBrowse = computed(() => props.resource === 'roms' && !!props.tag)
+
+/** True when uploads should prompt for a game name to rename the file */
+const needsGameRename = computed(() => ['saves', 'art'].includes(props.resource) && !!props.tag)
 
 const romEntries = computed(() => entries.value.filter(e => e.type === 'file'))
 
@@ -197,6 +214,102 @@ function formatSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(1024))
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`
+}
+
+const filteredGamePickerRoms = computed(() => {
+  const q = gamePickerSearch.value.toLowerCase()
+  if (!q) return gamePickerRoms.value
+  return gamePickerRoms.value.filter(name => name.toLowerCase().includes(q))
+})
+
+async function openGamePicker(mode: 'folder' | 'upload' = 'folder') {
+  gamePickerMode.value = mode
+  showGamePicker.value = true
+  gamePickerSearch.value = ''
+  gamePickerLoading.value = true
+  try {
+    const data = await listFilesRecursive('roms', props.tag!)
+    gamePickerRoms.value = data.entries
+      .filter(e => e.type === 'file')
+      .map(e => {
+        const name = e.name.includes('/') ? e.name.substring(e.name.lastIndexOf('/') + 1) : e.name
+        return stripExtension(name)
+      })
+  } catch {
+    gamePickerRoms.value = []
+  } finally {
+    gamePickerLoading.value = false
+  }
+}
+
+function cancelGamePicker() {
+  showGamePicker.value = false
+  pendingUploadFiles.value = []
+  artPickerGame.value = null
+  artPickerFile.value = null
+}
+
+function openArtPicker() {
+  openGamePicker('art')
+}
+
+function selectArtGame(name: string) {
+  artPickerGame.value = name
+  artPickerFile.value = null
+}
+
+function handleArtPickerFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  artPickerFile.value = input.files?.[0] ?? null
+}
+
+function artPickerDrop(event: DragEvent) {
+  artPickerDragOver.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file) artPickerFile.value = file
+}
+
+async function handleBulkArtUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  if (files.length) await doUpload(files)
+}
+
+async function confirmArtUpload() {
+  if (!artPickerGame.value || !artPickerFile.value) return
+  const name = artPickerGame.value
+  const file = artPickerFile.value
+  showGamePicker.value = false
+
+  const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '.png'
+  const renamed = new File([file], `${name}${ext}`, { type: file.type })
+  await doUpload([renamed])
+  artPickerGame.value = null
+  artPickerFile.value = null
+}
+
+async function pickGame(name: string) {
+  showGamePicker.value = false
+
+  if (gamePickerMode.value === 'upload') {
+    const files = pendingUploadFiles.value
+    pendingUploadFiles.value = []
+    const renamed = files.map(f => {
+      const ext = f.name.includes('.') ? f.name.substring(f.name.lastIndexOf('.')) : ''
+      return new File([f], `${name}${ext}`, { type: f.type })
+    })
+    await doUpload(renamed)
+    return
+  }
+
+  creatingFolder.value = true
+  try {
+    await createFolder(props.resource, ...apiSegments.value, name)
+    openFolder(name)
+  } finally {
+    creatingFolder.value = false
+  }
 }
 
 async function load(showLoading = true) {
@@ -369,13 +482,24 @@ async function confirmRename() {
 
 async function handleFiles(event: Event) {
   const input = event.target as HTMLInputElement
-  await doUpload(Array.from(input.files ?? []))
+  const files = Array.from(input.files ?? [])
   input.value = ''
+  if (needsGameRename.value && files.length) {
+    pendingUploadFiles.value = files
+    openGamePicker('upload')
+    return
+  }
+  await doUpload(files)
 }
 
 function onDrop(event: DragEvent) {
   dragOver.value = false
   const files = Array.from(event.dataTransfer?.files ?? [])
+  if (needsGameRename.value && files.length) {
+    pendingUploadFiles.value = files
+    openGamePicker('upload')
+    return
+  }
   doUpload(files)
 }
 
@@ -388,7 +512,7 @@ async function handleCreateFolder() {
     await createFolder(props.resource, ...apiSegments.value, name)
     newFolderName.value = ''
     showNewFolder.value = false
-    await reload()
+    openFolder(name)
   } finally {
     creatingFolder.value = false
   }
@@ -415,7 +539,7 @@ onMounted(load)
           <template v-for="(crumb, i) in breadcrumbs" :key="i">
             <span>/</span>
             <button
-              class="hover:text-foreground truncate max-w-32"
+              class="hover:text-foreground"
               :class="i === breadcrumbs.length - 1 ? 'text-foreground font-medium' : ''"
               @click="navigateTo(crumb.path)"
             >
@@ -427,7 +551,31 @@ onMounted(load)
     </div>
 
     <!-- Actions bar -->
-    <div v-if="props.resource !== 'guides'" class="flex items-center gap-2">
+    <div
+      v-if="['guides', 'states'].includes(props.resource) && props.tag && !subpath.length"
+      class="rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-150 border-border hover:border-accent/50 hover:bg-accent/5"
+      @click="openGamePicker"
+    >
+      <FolderPlus class="h-8 w-8 mx-auto text-muted-foreground" />
+      <p class="mt-3 text-sm font-medium text-muted-foreground">{{ props.resource === 'guides' ? 'Add guides for a game' : 'Add save states for a game' }}</p>
+    </div>
+    <div v-else-if="props.resource === 'art' && props.tag" class="space-y-2">
+      <div
+        class="rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-150 border-border hover:border-accent/50 hover:bg-accent/5"
+        @click="openArtPicker"
+      >
+        <ImagePlus class="h-8 w-8 mx-auto text-muted-foreground" />
+        <p class="mt-3 text-sm font-medium text-muted-foreground">Add box art for a game</p>
+      </div>
+      <div class="flex justify-center">
+        <Button variant="outline" size="sm" @click="bulkArtInput?.click()">
+          <Upload class="h-4 w-4" />
+          Bulk Upload Pre-Named Files
+        </Button>
+        <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtUpload" />
+      </div>
+    </div>
+    <div v-else-if="!['guides', 'states', 'art', 'bios', 'saves'].includes(props.resource)" class="flex items-center gap-2">
       <Button variant="outline" size="sm" @click="showNewFolder = !showNewFolder">
         <FolderPlus class="h-4 w-4" />
         New folder
@@ -452,6 +600,7 @@ onMounted(load)
 
     <!-- Upload area -->
     <div
+      v-if="!(['guides', 'states'].includes(props.resource) && props.tag && !subpath.length) && !(props.resource === 'art' && props.tag)"
       class="rounded-xl border-2 border-dashed p-6 text-center transition-all duration-150"
       :class="dragOver ? 'border-accent bg-accent/5' : 'border-border'"
       @dragover.prevent="dragOver = true"
@@ -495,7 +644,7 @@ onMounted(load)
 
     <!-- File list -->
     <div v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Loading...</div>
-    <div v-else-if="!entries.length" class="text-sm text-muted-foreground py-8 text-center">No files yet.</div>
+    <div v-else-if="!entries.length && !(['guides', 'states'].includes(props.resource) && props.tag && !subpath.length)" class="text-sm text-muted-foreground py-8 text-center">No files yet.</div>
 
     <!-- ROM grid with box art -->
     <template v-else-if="isRomsBrowse">
@@ -577,21 +726,7 @@ onMounted(load)
           <!-- Action bar -->
           <div class="flex items-center border-t border-border mt-auto">
             <button
-              v-if="getArtUrl(entry.name)"
-              class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50"
-              @click.stop="triggerArtUpload(entry.name)"
-            >
-              <ImagePlus class="h-4 w-4" />
-            </button>
-            <button
-              v-else
-              class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50"
-              @click.stop="triggerArtUpload(entry.name)"
-            >
-              <ImagePlus class="h-4 w-4" />
-            </button>
-            <button
-              class="flex-1 flex items-center justify-center py-2 border-l border-border"
+              class="flex-1 flex items-center justify-center py-2"
               :class="guideUploaded.has(entry.name) ? 'text-accent' : 'text-muted-foreground hover:text-accent hover:bg-muted/50'"
               @click.stop="triggerGuideUpload(entry.name)"
             >
@@ -735,5 +870,101 @@ onMounted(load)
         <Button variant="ghost" size="sm" @click="cancelMove">Cancel</Button>
       </div>
     </div>
+
+    <!-- Game picker modal -->
+    <Teleport to="body">
+      <div v-if="showGamePicker" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="cancelGamePicker">
+        <div class="bg-card border border-border rounded-xl w-full max-w-md mx-4 p-5 space-y-4 shadow-xl">
+          <!-- Art mode: two-step (pick game, then pick file) -->
+          <template v-if="gamePickerMode === 'art'">
+            <h2 class="text-lg font-semibold">{{ artPickerGame ? 'Add box art' : 'Pick a game' }}</h2>
+
+            <!-- Step 1: pick game -->
+            <template v-if="!artPickerGame">
+              <div class="relative">
+                <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input v-model="gamePickerSearch" placeholder="Search games..." class="!pl-9" />
+              </div>
+              <div class="rounded-lg border border-border max-h-64 overflow-y-auto">
+                <div v-if="gamePickerLoading" class="p-4 text-sm text-muted-foreground text-center">Loading...</div>
+                <div v-else-if="!filteredGamePickerRoms.length" class="p-4 text-sm text-muted-foreground text-center">No games found.</div>
+                <button
+                  v-for="name in filteredGamePickerRoms"
+                  :key="name"
+                  class="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left hover:bg-muted/50 border-t border-border first:border-t-0"
+                  @click="selectArtGame(name)"
+                >
+                  <Gamepad2 class="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span class="truncate">{{ name }}</span>
+                </button>
+              </div>
+            </template>
+
+            <!-- Step 2: pick file -->
+            <template v-else>
+              <p class="text-sm text-muted-foreground">
+                Uploading art for <span class="font-medium text-foreground">{{ artPickerGame }}</span>
+              </p>
+              <div
+                class="rounded-xl border-2 border-dashed p-6 text-center transition-all duration-150 cursor-pointer"
+                :class="artPickerDragOver ? 'border-accent bg-accent/5' : artPickerFile ? 'border-accent/50 bg-accent/5' : 'border-border'"
+                @dragover.prevent="artPickerDragOver = true"
+                @dragleave="artPickerDragOver = false"
+                @drop.prevent="artPickerDrop"
+                @click="artPickerInput?.click()"
+              >
+                <template v-if="artPickerFile">
+                  <Image class="h-8 w-8 mx-auto text-accent" />
+                  <p class="mt-2 text-sm font-medium text-accent">{{ artPickerFile.name }}</p>
+                </template>
+                <template v-else>
+                  <ImagePlus class="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p class="mt-2 text-sm text-muted-foreground">Drag an image here or click to browse</p>
+                </template>
+                <input ref="artPickerInput" type="file" accept="image/*" class="hidden" @change="handleArtPickerFile" />
+              </div>
+              <div class="flex items-center justify-between">
+                <button class="text-sm text-muted-foreground hover:text-foreground" @click="artPickerGame = null; artPickerFile = null">
+                  &larr; Pick a different game
+                </button>
+                <div class="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" @click="cancelGamePicker">Cancel</Button>
+                  <Button size="sm" :disabled="!artPickerFile" @click="confirmArtUpload">Upload</Button>
+                </div>
+              </div>
+            </template>
+
+            <div v-if="!artPickerGame" class="flex justify-end">
+              <Button variant="ghost" size="sm" @click="cancelGamePicker">Cancel</Button>
+            </div>
+          </template>
+
+          <!-- Folder / upload mode: single-step game picker -->
+          <template v-else>
+            <h2 class="text-lg font-semibold">Pick a game</h2>
+            <div class="relative">
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input v-model="gamePickerSearch" placeholder="Search games..." class="!pl-9" />
+            </div>
+            <div class="rounded-lg border border-border max-h-64 overflow-y-auto">
+              <div v-if="gamePickerLoading" class="p-4 text-sm text-muted-foreground text-center">Loading...</div>
+              <div v-else-if="!filteredGamePickerRoms.length" class="p-4 text-sm text-muted-foreground text-center">No games found.</div>
+              <button
+                v-for="name in filteredGamePickerRoms"
+                :key="name"
+                class="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left hover:bg-muted/50 border-t border-border first:border-t-0"
+                @click="pickGame(name)"
+              >
+                <Gamepad2 class="h-4 w-4 text-muted-foreground shrink-0" />
+                <span class="truncate">{{ name }}</span>
+              </button>
+            </div>
+            <div class="flex justify-end">
+              <Button variant="ghost" size="sm" @click="cancelGamePicker">Cancel</Button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

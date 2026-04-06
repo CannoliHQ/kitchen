@@ -6,12 +6,14 @@ import { platformName, platformLabel, platformIcon, groupPlatforms, type Platfor
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
-import { Wallpaper, LogOut, Cpu, Search, Gamepad2 } from 'lucide-vue-next'
+import { Wallpaper, LogOut, Search, Gamepad2, ArrowDownAZ, CalendarDays } from 'lucide-vue-next'
 
 const router = useRouter()
 const tags = ref<string[]>([])
 const loading = ref(true)
 const search = ref('')
+const sortMode = ref<'era' | 'alpha'>('era')
+const activeTab = ref<'content' | 'customization'>('content')
 
 const filteredTags = computed(() => {
   const q = search.value.toLowerCase()
@@ -23,10 +25,12 @@ const filteredTags = computed(() => {
 
 const groups = computed<PlatformGroup[]>(() => groupPlatforms(filteredTags.value))
 
-const FLAT_RESOURCES = [
-  { key: 'bios', label: 'BIOS', icon: Cpu },
-  { key: 'wallpapers', label: 'Wallpapers', icon: Wallpaper },
-]
+const alphabeticalGroups = computed<PlatformGroup[]>(() =>
+  groupPlatforms(filteredTags.value).map(g => ({
+    ...g,
+    tags: [...g.tags].sort((a, b) => platformName(a).localeCompare(platformName(b))),
+  }))
+)
 
 onMounted(async () => {
   try {
@@ -64,72 +68,134 @@ function disconnect() {
       </Button>
     </div>
 
-    <!-- Flat resources -->
-    <div class="grid grid-cols-2 gap-4">
-      <Card
-        v-for="res in FLAT_RESOURCES"
-        :key="res.key"
-        class="cursor-pointer hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 !p-5"
-        @click="browseFlat(res.key)"
+    <!-- Nav tabs -->
+    <div class="flex items-center gap-1 border-b border-border">
+      <button
+        class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+        :class="activeTab === 'content' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        @click="activeTab = 'content'"
       >
-        <div class="flex items-center gap-3">
-          <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
-            <component :is="res.icon" class="h-5 w-5 text-accent" />
-          </div>
-          <span class="font-semibold">{{ res.label }}</span>
-        </div>
-      </Card>
+        Content
+      </button>
+      <button
+        class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+        :class="activeTab === 'customization' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        @click="activeTab = 'customization'"
+      >
+        Customization
+      </button>
     </div>
 
-    <!-- Platforms -->
-    <div class="space-y-4 flex-1">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-muted-foreground">Platforms</h2>
-        <div class="relative w-60">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input v-model="search" placeholder="Search platforms..." class="!pl-9 !h-9 !rounded-lg" />
-        </div>
-      </div>
-
-      <p v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Loading platforms...</p>
-      <p v-else-if="!tags.length" class="text-sm text-muted-foreground py-8 text-center">
-        No platforms found. Add ROMs to get started.
-      </p>
-      <p v-else-if="!filteredTags.length" class="text-sm text-muted-foreground py-8 text-center">
-        No platforms match "{{ search }}".
-      </p>
-
-      <div v-else class="space-y-6">
-        <div v-for="group in groups" :key="group.name">
-          <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{{ group.name }}</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div
-              v-for="tag in group.tags"
-              :key="tag"
-              class="group cursor-pointer rounded-xl border border-border bg-card px-5 py-5 flex items-center gap-4 hover:border-accent/50 hover:shadow-md hover:shadow-accent/5"
-              @click="openPlatform(tag)"
+    <!-- Content tab -->
+    <template v-if="activeTab === 'content'">
+      <div class="space-y-4 flex-1">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-muted-foreground">Platforms</h2>
+          <div class="flex items-center gap-2">
+            <button
+              class="p-2 rounded-lg transition-colors"
+              :class="sortMode === 'era' ? 'text-accent bg-accent/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
+              title="Sort by era"
+              @click="sortMode = 'era'"
             >
-              <img
-                v-if="platformIcon(tag)"
-                :src="platformIcon(tag)"
-                :alt="tag"
-                class="h-12 w-12 shrink-0 object-contain"
-              />
-              <Gamepad2 v-else class="h-12 w-12 shrink-0 text-muted-foreground" />
-              <span class="font-semibold group-hover:text-accent">{{ platformName(tag) }}</span>
+              <CalendarDays class="h-4 w-4" />
+            </button>
+            <button
+              class="p-2 rounded-lg transition-colors"
+              :class="sortMode === 'alpha' ? 'text-accent bg-accent/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
+              title="Sort alphabetically"
+              @click="sortMode = 'alpha'"
+            >
+              <ArrowDownAZ class="h-4 w-4" />
+            </button>
+            <div class="relative w-60">
+              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input v-model="search" placeholder="Search platforms..." class="!pl-9 !h-9 !rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <p v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Loading platforms...</p>
+        <p v-else-if="!tags.length" class="text-sm text-muted-foreground py-8 text-center">
+          No platforms found. Add ROMs to get started.
+        </p>
+        <p v-else-if="!filteredTags.length" class="text-sm text-muted-foreground py-8 text-center">
+          No platforms match "{{ search }}".
+        </p>
+
+        <!-- Grouped by era -->
+        <div v-else-if="sortMode === 'era'" class="space-y-6">
+          <div v-for="group in groups" :key="group.name">
+            <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{{ group.name }}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div
+                v-for="tag in group.tags"
+                :key="tag"
+                class="group cursor-pointer rounded-xl border border-border bg-card px-5 py-5 flex items-center gap-4 hover:border-accent/50 hover:shadow-md hover:shadow-accent/5"
+                @click="openPlatform(tag)"
+              >
+                <img
+                  v-if="platformIcon(tag)"
+                  :src="platformIcon(tag)"
+                  :alt="tag"
+                  class="h-12 w-12 shrink-0 object-contain"
+                />
+                <Gamepad2 v-else class="h-12 w-12 shrink-0 text-muted-foreground" />
+                <span class="font-semibold group-hover:text-accent">{{ platformName(tag) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alphabetical within groups -->
+        <div v-else class="space-y-6">
+          <div v-for="group in alphabeticalGroups" :key="group.name">
+            <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{{ group.name }}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div
+                v-for="tag in group.tags"
+                :key="tag"
+                class="group cursor-pointer rounded-xl border border-border bg-card px-5 py-5 flex items-center gap-4 hover:border-accent/50 hover:shadow-md hover:shadow-accent/5"
+                @click="openPlatform(tag)"
+              >
+                <img
+                  v-if="platformIcon(tag)"
+                  :src="platformIcon(tag)"
+                  :alt="tag"
+                  class="h-12 w-12 shrink-0 object-contain"
+                />
+                <Gamepad2 v-else class="h-12 w-12 shrink-0 text-muted-foreground" />
+                <span class="font-semibold group-hover:text-accent">{{ platformName(tag) }}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
+
+    <!-- Customization tab -->
+    <template v-if="activeTab === 'customization'">
+      <div class="space-y-4 flex-1">
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <Card
+            class="cursor-pointer hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 !p-5"
+            @click="browseFlat('wallpapers')"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
+                <Wallpaper class="h-5 w-5 text-accent" />
+              </div>
+              <span class="font-semibold">Wallpapers</span>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </template>
 
     <!-- Footer -->
     <footer class="pt-8 pb-6 text-center text-xs text-muted-foreground/60 border-t border-border/50">
-      Platform icons courtesy of
-      <a href="https://github.com/rommapp/romm" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">RomM</a>
-      (AGPL-3.0) and
-      <a href="https://git.libretro.com/libretro-assets/retroarch-assets" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Libretro</a><br />
-      (CC BY 4.0). All trademarks are property of their respective owners.
+      Platform icons courtesy of <a href="https://git.libretro.com/libretro-assets/retroarch-assets" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Libretro</a> (CC BY 4.0).<br />
+      All trademarks are property of their respective owners.
     </footer>
   </div>
 </template>

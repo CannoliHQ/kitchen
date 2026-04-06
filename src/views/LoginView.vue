@@ -18,6 +18,7 @@ const digits = ref<string[]>(Array(6).fill(''))
 const octetRefs = ref<HTMLInputElement[]>([])
 const digitRefs = ref<HTMLInputElement[]>([])
 const pinError = ref(false)
+const connectionError = ref(false)
 const loading = ref(false)
 const showHost = ref(!servedFromDevice)
 
@@ -48,6 +49,11 @@ function getPinParam(): string | null {
 }
 
 onMounted(() => {
+  if (route.query.error === 'connection') {
+    connectionError.value = true
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+
   const hostParam = getHostParam()
   if (hostParam) {
     parseHostParam(hostParam)
@@ -155,6 +161,7 @@ async function connect(silent = false) {
   const pin = digits.value.join('')
   if (pin.length < 6) return
 
+  connectionError.value = false
   loading.value = true
   try {
     setCredentials(host.value, pin)
@@ -165,9 +172,13 @@ async function connect(silent = false) {
     digits.value = Array(6).fill('')
     loading.value = false
     nextTick(() => digitRefs.value[0]?.focus())
-    if (!silent && err instanceof Error && err.message === 'Unauthorized') {
-      pinError.value = true
-      setTimeout(() => { pinError.value = false }, 600)
+    if (!silent && err instanceof Error) {
+      if (err.message === 'Unauthorized') {
+        pinError.value = true
+        setTimeout(() => { pinError.value = false }, 600)
+      } else if (err.message === 'ConnectionError') {
+        connectionError.value = true
+      }
     }
   }
 }
@@ -216,6 +227,7 @@ function onDigitPaste(event: ClipboardEvent) {
         <img src="/logo.png" alt="Cannoli" class="mx-auto h-16 w-auto" />
         <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
         <p class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
+        <p v-if="connectionError" class="text-sm font-medium text-destructive">Cannot connect to server.<br>Ensure Nonna's Kitchen is running.</p>
       </div>
 
       <div class="space-y-5">
