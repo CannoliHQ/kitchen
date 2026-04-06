@@ -222,7 +222,7 @@ const filteredGamePickerRoms = computed(() => {
   return gamePickerRoms.value.filter(name => name.toLowerCase().includes(q))
 })
 
-async function openGamePicker(mode: 'folder' | 'upload' = 'folder') {
+async function openGamePicker(mode: 'folder' | 'upload' | 'art' = 'folder') {
   gamePickerMode.value = mode
   showGamePicker.value = true
   gamePickerSearch.value = ''
@@ -554,7 +554,7 @@ onMounted(load)
     <div
       v-if="['guides', 'states'].includes(props.resource) && props.tag && !subpath.length"
       class="rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-150 border-border hover:border-accent/50 hover:bg-accent/5"
-      @click="openGamePicker"
+      @click="openGamePicker('folder')"
     >
       <FolderPlus class="h-8 w-8 mx-auto text-muted-foreground" />
       <p class="mt-3 text-sm font-medium text-muted-foreground">{{ props.resource === 'guides' ? 'Add guides for a game' : 'Add save states for a game' }}</p>
