@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { setCredentials, getInfo, clearCredentials } from '@/api/client'
+import { setCredentials, setBaseUrlOnly, getInfo, clearCredentials, getAuthStatus } from '@/api/client'
 import Card from '@/components/ui/Card.vue'
 
 const router = useRouter()
@@ -21,6 +21,7 @@ const pinError = ref(false)
 const connectionError = ref(false)
 const loading = ref(false)
 const showHost = ref(!servedFromDevice)
+const pinRequired = ref(true)
 
 const host = computed(() => {
   const ip = octets.value.join('.')
@@ -48,7 +49,7 @@ function getPinParam(): string | null {
   return new URLSearchParams(window.location.search).get('pin')
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (route.query.error === 'connection') {
     connectionError.value = true
     window.history.replaceState({}, '', window.location.pathname)
@@ -70,18 +71,19 @@ onMounted(() => {
     window.history.replaceState({}, '', window.location.pathname)
   }
 
-  // Auto-connect if both host and full pin are provided via query params
-  if (hostParam && pinParam && digits.value.join('').length === 6) {
-    nextTick(() => connect(true))
-    return
-  }
-
-  // Try restoring saved credentials from localStorage
   const savedHost = localStorage.getItem('cannoli_host')
   const savedPin = localStorage.getItem('cannoli_pin')
   if (savedHost && !hostParam) {
     parseHostParam(savedHost)
   }
+
+  if (await tryPinlessConnect()) return
+
+  if (hostParam && pinParam && digits.value.join('').length === 6) {
+    nextTick(() => connect(true))
+    return
+  }
+
   if (savedHost && savedPin && !hostParam && !pinParam) {
     const chars = savedPin.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6).split('')
     digits.value = [...chars, ...Array(6 - chars.length).fill('')]
@@ -183,6 +185,32 @@ async function connect(silent = false) {
   }
 }
 
+async function tryPinlessConnect(): Promise<boolean> {
+  if (!octets.value.every(o => o)) return false
+  try {
+    const status = await getAuthStatus(host.value)
+    if (status.required) {
+      pinRequired.value = true
+      return false
+    }
+    pinRequired.value = false
+    setBaseUrlOnly(host.value)
+    router.push({ name: 'dashboard' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+watch(
+  () => octets.value.join('.'),
+  async (joined) => {
+    if (!/^\d+\.\d+\.\d+\.\d+$/.test(joined)) return
+    if (await tryPinlessConnect()) return
+    if (pinRequired.value) nextTick(() => digitRefs.value[0]?.focus())
+  },
+)
+
 function onDigitInput(i: number, event: Event) {
   const input = event.target as HTMLInputElement
   const val = input.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
@@ -226,7 +254,8 @@ function onDigitPaste(event: ClipboardEvent) {
       <div class="space-y-3 text-center">
         <img src="/logo.png" alt="Cannoli" class="mx-auto h-16 w-auto" />
         <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
-        <p class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
+        <p v-if="showHost" class="text-lg font-semibold text-foreground">Enter your device IP.</p>
+        <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
         <p v-if="connectionError" class="text-sm font-medium text-destructive">Cannot connect to server.<br>Ensure Nonna's Kitchen is running.</p>
       </div>
 
@@ -253,7 +282,7 @@ function onDigitPaste(event: ClipboardEvent) {
         </div>
 
         <!-- PIN -->
-        <div class="space-y-2">
+        <div v-if="pinRequired" class="space-y-2">
           <div class="flex justify-center gap-2" :class="{ 'animate-shake': pinError }" @paste="onDigitPaste">
             <input
               v-for="(_, i) in 6"

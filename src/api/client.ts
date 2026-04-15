@@ -13,6 +13,7 @@ export interface ListResponse {
 
 const token = ref('')
 const baseUrl = ref('')
+const authRequired = ref<boolean | null>(null)
 
 let onUnauthorized: (() => void) | null = null
 let onConnectionError: (() => void) | null = null
@@ -29,9 +30,19 @@ export function setCredentials(host: string, pin: string) {
   const bare = host.replace(/^https?:\/\//, '').replace(/\/$/, '')
   const withPort = bare.includes(':') ? bare : `${bare}:1091`
   baseUrl.value = `http://${withPort}`
-  token.value = btoa(`nonna:${pin}`)
+  token.value = pin ? btoa(`nonna:${pin}`) : ''
   localStorage.setItem('cannoli_host', host)
-  localStorage.setItem('cannoli_pin', pin)
+  if (pin) localStorage.setItem('cannoli_pin', pin)
+  else localStorage.removeItem('cannoli_pin')
+}
+
+export function setBaseUrlOnly(host: string) {
+  const bare = host.replace(/^https?:\/\//, '').replace(/\/$/, '')
+  const withPort = bare.includes(':') ? bare : `${bare}:1091`
+  baseUrl.value = `http://${withPort}`
+  token.value = ''
+  localStorage.setItem('cannoli_host', host)
+  localStorage.removeItem('cannoli_pin')
 }
 
 export function restoreCredentials(): boolean {
@@ -44,17 +55,35 @@ export function restoreCredentials(): boolean {
   return false
 }
 
+export interface AuthStatus {
+  required: boolean
+}
+
+export async function getAuthStatus(host?: string): Promise<AuthStatus> {
+  const target = host
+    ? `http://${host.replace(/^https?:\/\//, '').replace(/\/$/, '')}`
+    : baseUrl.value
+  if (!target) throw new Error('ConnectionError')
+  const res = await fetch(`${target}/api/auth`, { method: 'GET' })
+  if (!res.ok) throw new Error('ConnectionError')
+  const status = (await res.json()) as AuthStatus
+  authRequired.value = status.required
+  return status
+}
+
 export function getBaseUrl() {
   return baseUrl.value
 }
 
 export function isAuthenticated() {
+  if (authRequired.value === false) return true
   return token.value !== ''
 }
 
 export function clearCredentials() {
   token.value = ''
   baseUrl.value = ''
+  authRequired.value = null
   localStorage.removeItem('cannoli_pin')
 }
 
@@ -66,12 +95,11 @@ function buildPath(resource: string, ...segments: (string | undefined)[]): strin
 async function request(path: string, init?: RequestInit): Promise<Response> {
   let res: Response
   try {
+    const headers: Record<string, string> = { ...(init?.headers as Record<string, string> | undefined) }
+    if (token.value) headers.Authorization = `Basic ${token.value}`
     res = await fetch(`${baseUrl.value}${path}`, {
       ...init,
-      headers: {
-        Authorization: `Basic ${token.value}`,
-        ...init?.headers,
-      },
+      headers,
     })
   } catch {
     clearCredentials()
@@ -170,7 +198,7 @@ export function uploadFiles(
 
   const promise = new Promise<{ ok: boolean; files: string[] }>((resolve, reject) => {
     xhr.open('POST', `${baseUrl.value}${path}`)
-    xhr.setRequestHeader('Authorization', `Basic ${token.value}`)
+    if (token.value) xhr.setRequestHeader('Authorization', `Basic ${token.value}`)
 
     xhr.upload.addEventListener('progress', (e) => {
       if (e.lengthComputable && onProgress) {
