@@ -6,7 +6,7 @@ import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, BookOpen, Search, Gamepad2 } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, BookOpen, Search, Gamepad2, XCircle, Ban, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -25,6 +25,11 @@ const abortUpload = ref<(() => void) | null>(null)
 const fileInput = ref<HTMLInputElement>()
 const dragOver = ref(false)
 const uploadFileNames = ref('')
+const uploadCurrentIndex = ref(0)
+const uploadTotal = ref(0)
+const uploadCancelled = ref(false)
+type UploadStatus = 'pending' | 'uploading' | 'done' | 'failed' | 'cancelled'
+const uploadQueue = ref<{ name: string; status: UploadStatus }[]>([])
 const showNewFolder = ref(false)
 const newFolderName = ref('')
 const creatingFolder = ref(false)
@@ -359,24 +364,55 @@ async function doUpload(files: globalThis.File[]) {
   if (!files.length) return
 
   uploading.value = true
+  uploadCancelled.value = false
   uploadProgress.value = 0
   uploadResult.value = []
-  uploadFileNames.value = files.length === 1
-    ? files[0]!.name
-    : `${files.length} files`
-  const { promise, abort } = uploadFiles(
-    props.resource,
-    apiSegments.value,
-    files,
-    (pct) => { uploadProgress.value = pct },
-  )
-  abortUpload.value = abort
+  uploadTotal.value = files.length
+  uploadCurrentIndex.value = 0
+  uploadQueue.value = files.map((f) => ({ name: f.name, status: 'pending' as UploadStatus }))
+
+  const uploaded: string[] = []
   try {
-    const result = await promise
-    uploadResult.value = result.files
+    for (let i = 0; i < files.length; i++) {
+      if (uploadCancelled.value) {
+        for (let j = i; j < uploadQueue.value.length; j++) {
+          uploadQueue.value[j]!.status = 'cancelled'
+        }
+        break
+      }
+      const file = files[i]!
+      uploadCurrentIndex.value = i + 1
+      uploadFileNames.value = file.name
+      uploadProgress.value = 0
+      uploadQueue.value[i]!.status = 'uploading'
+
+      const { promise, abort } = uploadFiles(
+        props.resource,
+        apiSegments.value,
+        [file],
+        (pct) => { uploadProgress.value = pct },
+      )
+      abortUpload.value = abort
+      try {
+        const result = await promise
+        uploaded.push(...result.files)
+        uploadQueue.value[i]!.status = 'done'
+      } catch {
+        if (uploadCancelled.value) {
+          uploadQueue.value[i]!.status = 'cancelled'
+          for (let j = i + 1; j < uploadQueue.value.length; j++) {
+            uploadQueue.value[j]!.status = 'cancelled'
+          }
+        } else {
+          uploadQueue.value[i]!.status = 'failed'
+        }
+        break
+      } finally {
+        abortUpload.value = null
+      }
+    }
+    uploadResult.value = uploaded
     await reload()
-  } catch {
-    // cancelled or failed
   } finally {
     uploading.value = false
     abortUpload.value = null
@@ -384,6 +420,7 @@ async function doUpload(files: globalThis.File[]) {
 }
 
 function cancelUpload() {
+  uploadCancelled.value = true
   abortUpload.value?.()
 }
 
@@ -623,7 +660,9 @@ onMounted(load)
       </div>
       <div v-if="uploading" class="mt-4 space-y-3">
         <div class="flex items-center justify-between text-sm">
-          <span class="text-foreground font-medium truncate">{{ uploadFileNames }}</span>
+          <span class="text-foreground font-medium truncate">
+            {{ uploadFileNames }}<span v-if="uploadTotal > 1" class="text-muted-foreground font-normal"> ({{ uploadCurrentIndex }} of {{ uploadTotal }})</span>
+          </span>
           <span class="font-mono text-muted-foreground ml-2 shrink-0">{{ uploadProgress }}%</span>
         </div>
         <div class="flex items-center gap-3">
@@ -634,6 +673,30 @@ onMounted(load)
           >
             Cancel
           </button>
+        </div>
+        <div
+          v-if="uploadQueue.length > 1"
+          class="max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border"
+        >
+          <div
+            v-for="item in uploadQueue"
+            :key="item.name"
+            class="flex items-center gap-2 px-3 py-2 text-xs"
+          >
+            <CheckCircle v-if="item.status === 'done'" class="h-3.5 w-3.5 shrink-0 text-accent" />
+            <Loader2 v-else-if="item.status === 'uploading'" class="h-3.5 w-3.5 shrink-0 text-accent animate-spin" />
+            <XCircle v-else-if="item.status === 'failed'" class="h-3.5 w-3.5 shrink-0 text-destructive" />
+            <Ban v-else-if="item.status === 'cancelled'" class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <FileIcon v-else class="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+            <span
+              class="flex-1 truncate"
+              :class="{
+                'text-foreground font-medium': item.status === 'uploading' || item.status === 'done',
+                'text-muted-foreground': item.status === 'pending' || item.status === 'cancelled',
+                'text-destructive': item.status === 'failed',
+              }"
+            >{{ item.name }}</span>
+          </div>
         </div>
       </div>
       <div v-if="uploadResult.length" class="mt-3 flex items-center justify-center gap-2 text-sm text-accent">
