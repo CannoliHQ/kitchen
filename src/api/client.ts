@@ -125,6 +125,178 @@ export async function getTags(): Promise<string[]> {
   return data.tags
 }
 
+export interface GameRow {
+  id: number
+  rom: string
+  displayName: string
+  sortKey: string
+  path: string
+  size: number
+  modified: number
+  hasArt: boolean
+  artUrl?: string
+  savesCount: number
+  statesCount: number
+  guidesCount: number
+  raGameId: number | null
+  lastPlayedAt: number | null
+  discPaths: string[] | null
+}
+
+export interface PlatformGames {
+  platform: string
+  displayName: string
+  games: GameRow[]
+}
+
+export interface GameDetail extends GameRow {
+  platform: string
+  platformDisplayName: string
+}
+
+export async function getGames(tag: string): Promise<PlatformGames> {
+  const res = await request(`/api/games/${encodeURIComponent(tag)}`)
+  if (!res.ok) throw new Error(`getGames ${res.status}`)
+  return res.json()
+}
+
+export async function getGame(tag: string, id: number): Promise<GameDetail> {
+  const res = await request(`/api/games/${encodeURIComponent(tag)}/${id}`)
+  if (!res.ok) throw new Error(`getGame ${res.status}`)
+  return res.json()
+}
+
+function gameBase(tag: string, id: number): string {
+  return `/api/games/${encodeURIComponent(tag)}/${id}`
+}
+
+export interface GameFile {
+  name: string
+  size: number
+  modified: number
+}
+
+export interface GameRomFile {
+  name: string
+  path: string
+  size: number
+  modified: number
+}
+
+export async function gameArtBlob(tag: string, id: number): Promise<string | null> {
+  const res = await request(`${gameBase(tag, id)}/art`)
+  if (!res.ok) return null
+  return URL.createObjectURL(await res.blob())
+}
+
+export async function uploadGameArt(tag: string, id: number, file: File): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/art?name=${encodeURIComponent(file.name)}`, {
+    method: 'POST',
+    body: file,
+  })
+  if (!res.ok) throw new Error(`uploadGameArt ${res.status}`)
+}
+
+export async function deleteGameArt(tag: string, id: number): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/art`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteGameArt ${res.status}`)
+}
+
+export async function listGameRoms(tag: string, id: number): Promise<GameRomFile[]> {
+  const res = await request(`${gameBase(tag, id)}/roms`)
+  if (!res.ok) throw new Error(`listGameRoms ${res.status}`)
+  return (await res.json()).files
+}
+
+export async function downloadGameRomFile(tag: string, id: number, path: string, filename: string): Promise<void> {
+  await downloadFile(`${gameBase(tag, id)}/rom?file=${encodeURIComponent(path)}`, filename)
+}
+
+export async function deleteGameRomFile(tag: string, id: number, path: string): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/rom?file=${encodeURIComponent(path)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteGameRomFile ${res.status}`)
+}
+
+export async function listGameSaves(tag: string, id: number): Promise<GameFile[]> {
+  const res = await request(`${gameBase(tag, id)}/saves`)
+  if (!res.ok) throw new Error(`listGameSaves ${res.status}`)
+  return (await res.json()).files
+}
+
+export async function downloadGameSave(tag: string, id: number, name: string): Promise<void> {
+  await downloadFile(`${gameBase(tag, id)}/saves?file=${encodeURIComponent(name)}`, name)
+}
+
+export async function uploadGameSave(tag: string, id: number, file: File): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/saves?name=${encodeURIComponent(file.name)}`, {
+    method: 'POST',
+    body: file,
+  })
+  if (!res.ok) throw new Error(`uploadGameSave ${res.status}`)
+}
+
+export async function deleteGameSave(tag: string, id: number, name: string): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/saves?file=${encodeURIComponent(name)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteGameSave ${res.status}`)
+}
+
+export async function listGameGuides(tag: string, id: number): Promise<GameFile[]> {
+  const res = await request(`${gameBase(tag, id)}/guides`)
+  if (!res.ok) throw new Error(`listGameGuides ${res.status}`)
+  return (await res.json()).files
+}
+
+export async function downloadGameGuide(tag: string, id: number, name: string): Promise<void> {
+  await downloadFile(`${gameBase(tag, id)}/guides?file=${encodeURIComponent(name)}`, name)
+}
+
+export async function uploadGameGuide(tag: string, id: number, file: File): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/guides?name=${encodeURIComponent(file.name)}`, {
+    method: 'POST',
+    body: file,
+  })
+  if (!res.ok) throw new Error(`uploadGameGuide ${res.status}`)
+}
+
+export async function deleteGameGuide(tag: string, id: number, name: string): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/guides?file=${encodeURIComponent(name)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteGameGuide ${res.status}`)
+}
+
+export async function listGameStates(tag: string, id: number): Promise<SlotList> {
+  const res = await request(`${gameBase(tag, id)}/states`)
+  if (!res.ok) throw new Error(`listGameStates ${res.status}`)
+  return res.json()
+}
+
+export async function gameStateThumbnailBlob(tag: string, id: number, slot: number): Promise<string | null> {
+  const res = await request(`${gameBase(tag, id)}/states/${slot}/thumbnail`)
+  if (!res.ok) return null
+  return URL.createObjectURL(await res.blob())
+}
+
+export async function uploadGameState(tag: string, id: number, slot: number, file: File): Promise<{ ok: boolean }> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await request(`${gameBase(tag, id)}/states/${slot}`, { method: 'POST', body: form })
+  if (!res.ok) throw new Error(`uploadGameState ${res.status}`)
+  return res.json()
+}
+
+export async function deleteGameState(tag: string, id: number, slot: number): Promise<{ ok: boolean }> {
+  const res = await request(`${gameBase(tag, id)}/states/${slot}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteGameState ${res.status}`)
+  return res.json()
+}
+
+export async function downloadGameState(tag: string, id: number, slot: number, filename: string): Promise<void> {
+  await downloadFile(`${gameBase(tag, id)}/states/${slot}`, filename)
+}
+
+export async function downloadGameStatesZip(tag: string, id: number, filename: string): Promise<void> {
+  await downloadFile(`${gameBase(tag, id)}/states/zip`, filename)
+}
+
 export async function listFiles(resource: string, ...subpath: (string | undefined)[]): Promise<ListResponse> {
   const path = buildPath(resource, ...subpath)
   const res = await request(path)
@@ -173,6 +345,34 @@ export async function getArtworkBlob(tag: string, name: string): Promise<string 
   if (!res.ok) return null
   const blob = await res.blob()
   return URL.createObjectURL(blob)
+}
+
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const res = await request(path)
+  if (!res.ok) throw new Error(`download ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+export interface SlotInfo {
+  slot: number
+  label: string
+  exists: boolean
+  size: number
+  modified: number
+  thumbnail: boolean
+}
+
+export interface SlotList {
+  game: string
+  slots: SlotInfo[]
 }
 
 export async function deleteFile(resource: string, ...subpath: (string | undefined)[]): Promise<{ ok: boolean }> {

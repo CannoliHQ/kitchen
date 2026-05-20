@@ -9,6 +9,15 @@ const route = useRoute()
 
 const DEFAULT_PORT = '1091'
 
+const redirectTarget = (() => {
+  const r = route.query.redirect
+  return typeof r === 'string' && r.startsWith('/') && r !== '/' ? r : null
+})()
+
+function proceed() {
+  router.push(redirectTarget ?? { name: 'dashboard' })
+}
+
 const servedFromDevice = window.location.port === DEFAULT_PORT
 const octets = ref<string[]>(servedFromDevice
   ? window.location.hostname.split('.')
@@ -20,6 +29,7 @@ const digitRefs = ref<HTMLInputElement[]>([])
 const pinError = ref(false)
 const connectionError = ref(false)
 const loading = ref(false)
+const checking = ref(true)
 const showHost = ref(!servedFromDevice)
 const pinRequired = ref(true)
 
@@ -93,6 +103,7 @@ onMounted(async () => {
     }
   }
 
+  checking.value = false
   nextTick(() => {
     if (showHost.value) {
       octetRefs.value[0]?.focus()
@@ -168,11 +179,12 @@ async function connect(silent = false) {
   try {
     setCredentials(host.value, pin)
     await getInfo()
-    router.push({ name: 'dashboard' })
+    proceed()
   } catch (err) {
     clearCredentials()
     digits.value = Array(6).fill('')
     loading.value = false
+    checking.value = false
     nextTick(() => digitRefs.value[0]?.focus())
     if (!silent && err instanceof Error) {
       if (err.message === 'Unauthorized') {
@@ -195,7 +207,7 @@ async function tryPinlessConnect(): Promise<boolean> {
     }
     pinRequired.value = false
     setBaseUrlOnly(host.value)
-    router.push({ name: 'dashboard' })
+    proceed()
     return true
   } catch {
     return false
@@ -254,12 +266,14 @@ function onDigitPaste(event: ClipboardEvent) {
       <div class="space-y-3 text-center">
         <img src="/logo.png" alt="Cannoli" class="mx-auto h-16 w-auto" />
         <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
-        <p v-if="showHost" class="text-lg font-semibold text-foreground">Enter your device IP.</p>
-        <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
-        <p v-if="connectionError" class="text-sm font-medium text-destructive">Cannot connect to server.<br>Ensure Nonna's Kitchen is running.</p>
+        <template v-if="!checking">
+          <p v-if="showHost" class="text-lg font-semibold text-foreground">Enter your device IP.</p>
+          <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
+          <p v-if="connectionError" class="text-sm font-medium text-destructive">Cannot connect to server.<br>Ensure Nonna's Kitchen is running.</p>
+        </template>
       </div>
 
-      <div class="space-y-5">
+      <div v-if="!checking" class="space-y-5">
         <!-- IP Address -->
         <div v-if="showHost" class="space-y-2">
           <label class="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center block">Device IP Address</label>

@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTags, clearCredentials } from '@/api/client'
 import { platformName, platformLabel, platformIcon, groupPlatforms, type PlatformGroup } from '@/api/platforms'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
-import { Wallpaper, LogOut, Search, Gamepad2, ArrowDownAZ, CalendarDays } from 'lucide-vue-next'
+import { Wallpaper, LogOut, Search, Gamepad2, ArrowDownAZ, CalendarDays, Palette, Layers } from 'lucide-vue-next'
 
+const props = defineProps<{ tab?: string }>()
 const router = useRouter()
 const tags = ref<string[]>([])
 const loading = ref(true)
 const search = ref('')
-const sortMode = ref<'era' | 'alpha'>('era')
-const activeTab = ref<'content' | 'customization'>('content')
+const sortMode = ref<'era' | 'alpha'>(
+  localStorage.getItem('cannoli_sort_mode') === 'alpha' ? 'alpha' : 'era',
+)
+watch(sortMode, v => localStorage.setItem('cannoli_sort_mode', v))
+const activeTab = computed<'content' | 'customization'>(() =>
+  props.tab === 'customization' ? 'customization' : 'content',
+)
+
+function selectTab(tab: 'content' | 'customization') {
+  router.replace(`/dashboard/${tab === 'content' ? 'games' : 'customization'}`)
+}
 
 const filteredTags = computed(() => {
   const q = search.value.toLowerCase()
@@ -50,7 +60,7 @@ function disconnect() {
 </script>
 
 <template>
-  <div class="mx-auto w-[75%] p-6 pb-0 space-y-8 min-h-screen flex flex-col">
+  <div class="mx-auto max-w-6xl p-6 pb-0 space-y-8 min-h-screen flex flex-col">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -68,14 +78,14 @@ function disconnect() {
       <button
         class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
         :class="activeTab === 'content' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'"
-        @click="activeTab = 'content'"
+        @click="selectTab('content')"
       >
-        Content
+        Games
       </button>
       <button
         class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
         :class="activeTab === 'customization' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'"
-        @click="activeTab = 'customization'"
+        @click="selectTab('customization')"
       >
         Customization
       </button>
@@ -181,6 +191,28 @@ function disconnect() {
                 <Wallpaper class="h-5 w-5 text-accent" />
               </div>
               <span class="font-semibold">Wallpapers</span>
+            </div>
+          </Card>
+          <Card
+            class="cursor-pointer hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 !p-5"
+            @click="browseFlat('shaders')"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
+                <Palette class="h-5 w-5 text-accent" />
+              </div>
+              <span class="font-semibold">Shaders</span>
+            </div>
+          </Card>
+          <Card
+            class="cursor-pointer hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 !p-5"
+            @click="browseFlat('overlays')"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
+                <Layers class="h-5 w-5 text-accent" />
+              </div>
+              <span class="font-semibold">Overlays</span>
             </div>
           </Card>
         </div>

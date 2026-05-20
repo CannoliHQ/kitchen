@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, getArtworkIndex, getArtworkBlob, type FileEntry } from '@/api/client'
+import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, type FileEntry } from '@/api/client'
 import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, BookOpen, Search, Gamepad2, XCircle, Ban, Loader2 } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -42,10 +42,6 @@ const moveError = ref('')
 const renamingEntry = ref<string | null>(null)
 const renameValue = ref('')
 const renameError = ref('')
-const artInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
-const artBlobUrls = ref<Map<string, string>>(new Map())
-const guideInputRefs = ref<Map<string, HTMLInputElement>>(new Map())
-const guideUploaded = ref<Set<string>>(new Set())
 const showGamePicker = ref(false)
 const gamePickerRoms = ref<string[]>([])
 const gamePickerLoading = ref(false)
@@ -93,125 +89,12 @@ const breadcrumbs = computed(() => {
   return crumbs
 })
 
-/** True when browsing ROMs for a platform (any depth) */
-const isRomsBrowse = computed(() => props.resource === 'roms' && !!props.tag)
-
 /** True when uploads should prompt for a game name to rename the file */
 const needsGameRename = computed(() => ['saves', 'art'].includes(props.resource) && !!props.tag)
-
-const romEntries = computed(() => entries.value.filter(e => e.type === 'file'))
 
 function stripExtension(name: string): string {
   const i = name.lastIndexOf('.')
   return i > 0 ? name.substring(0, i) : name
-}
-
-function normalizeKey(s: string): string {
-  return s.normalize('NFC').toLowerCase()
-}
-
-function getArtUrl(name: string): string | undefined {
-  return artBlobUrls.value.get(normalizeKey(stripExtension(name)))
-}
-
-async function loadArtwork() {
-  if (!props.tag) return
-  const tag = props.tag
-
-  // Revoke old blob URLs
-  for (const url of artBlobUrls.value.values()) URL.revokeObjectURL(url)
-  artBlobUrls.value = new Map()
-
-  try {
-    const artEntries = await getArtworkIndex(tag)
-    if (!artEntries.length) return
-
-    const artLookup = new Map(artEntries.map(a => [normalizeKey(a.name), a.name]))
-
-    const newUrls = new Map<string, string>()
-    for (const entry of romEntries.value) {
-      const baseName = stripExtension(entry.name)
-      const artName = artLookup.get(normalizeKey(baseName))
-      if (!artName) continue
-      try {
-        const blobUrl = await getArtworkBlob(tag, artName)
-        if (blobUrl) {
-          newUrls.set(normalizeKey(baseName), blobUrl)
-          artBlobUrls.value = new Map(newUrls)
-        }
-      } catch {
-        // skip failed art
-      }
-    }
-  } catch {
-    // artwork not available
-  }
-}
-
-function triggerArtUpload(romName: string) {
-  const input = artInputRefs.value.get(romName)
-  input?.click()
-}
-
-function setArtInputRef(el: unknown, romName: string) {
-  if (el instanceof HTMLInputElement) artInputRefs.value.set(romName, el)
-}
-
-async function handleArtUpload(romName: string, event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file || !props.tag) return
-
-  const baseName = stripExtension(romName)
-  const ext = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '.png'
-  const renamedFile = new File([file], `${baseName}${ext}`, { type: file.type })
-
-  const { promise } = uploadFiles('art', [props.tag], [renamedFile])
-  try {
-    await promise
-    // Reload the art for this ROM
-    const blobUrl = await getArtworkBlob(props.tag, baseName)
-    if (blobUrl) {
-      const newUrls = new Map(artBlobUrls.value)
-      newUrls.set(normalizeKey(baseName), blobUrl)
-      artBlobUrls.value = newUrls
-    }
-  } catch {
-    // upload failed
-  }
-  input.value = ''
-}
-
-function triggerGuideUpload(romName: string) {
-  const input = guideInputRefs.value.get(romName)
-  input?.click()
-}
-
-function setGuideInputRef(el: unknown, romName: string) {
-  if (el instanceof HTMLInputElement) guideInputRefs.value.set(romName, el)
-}
-
-async function handleGuideUpload(romName: string, event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file || !props.tag) return
-
-  const gameName = stripExtension(romName)
-  const { promise } = uploadFiles('guides', [props.tag, gameName], [file])
-  try {
-    await promise
-    const updated = new Set(guideUploaded.value)
-    updated.add(romName)
-    guideUploaded.value = updated
-    setTimeout(() => {
-      const reverted = new Set(guideUploaded.value)
-      reverted.delete(romName)
-      guideUploaded.value = reverted
-    }, 2000)
-  } catch {
-    // upload failed
-  }
-  input.value = ''
 }
 
 function formatSize(bytes: number): string {
@@ -327,7 +210,6 @@ async function load(showLoading = true) {
   } finally {
     loading.value = false
   }
-  if (isRomsBrowse.value) loadArtwork()
 }
 
 /** Reload list without flashing the loading state */
@@ -708,117 +590,6 @@ onMounted(load)
     <!-- File list -->
     <div v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Loading...</div>
     <div v-else-if="!entries.length && !(['guides', 'states'].includes(props.resource) && props.tag && !subpath.length)" class="text-sm text-muted-foreground py-8 text-center">No files yet.</div>
-
-    <!-- ROM grid with box art -->
-    <template v-else-if="isRomsBrowse">
-      <!-- Folders first as list -->
-      <div v-if="entries.some(e => e.type === 'dir')" class="rounded-xl border border-border overflow-hidden">
-        <div
-          v-for="(entry, idx) in entries.filter(e => e.type === 'dir')"
-          :key="entry.name"
-          class="group flex items-center gap-3 px-4 py-3 hover:bg-muted/50 cursor-pointer"
-          :class="idx > 0 ? 'border-t border-border' : ''"
-          @click="openFolder(entry.name)"
-        >
-          <Folder class="h-4 w-4 text-accent shrink-0" />
-          <span class="flex-1 truncate text-sm">{{ entry.name }}</span>
-          <button
-            class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
-            @click.stop="startRename(entry.name)"
-          >
-            <Pencil class="h-3.5 w-3.5" />
-          </button>
-          <button
-            class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
-            @click.stop="startMove(entry.name)"
-          >
-            <MoveRight class="h-3.5 w-3.5" />
-          </button>
-          <button
-            class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-            :disabled="deleting === entry.name"
-            @click.stop="handleDelete(entry.name)"
-          >
-            <Trash2 class="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-
-      <!-- ROM cards with art -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <div
-          v-for="entry in romEntries"
-          :key="entry.name"
-          class="rounded-xl border border-border bg-card overflow-hidden hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 flex flex-col"
-        >
-          <!-- Art image -->
-          <div class="aspect-square bg-muted flex items-center justify-center overflow-hidden relative">
-            <img
-              v-if="getArtUrl(entry.name)"
-              :src="getArtUrl(entry.name)"
-              :alt="entry.name"
-              class="h-full w-full object-contain"
-            />
-            <button
-              v-if="!getArtUrl(entry.name)"
-              class="flex flex-col items-center gap-1.5 text-muted-foreground/40 hover:text-accent/60 cursor-pointer"
-              @click.stop="triggerArtUpload(entry.name)"
-            >
-              <ImagePlus class="h-10 w-10" />
-              <span class="text-xs font-medium">Add art</span>
-            </button>
-            <input
-              :ref="(el) => setArtInputRef(el, entry.name)"
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="handleArtUpload(entry.name, $event)"
-            />
-            <input
-              :ref="(el) => setGuideInputRef(el, entry.name)"
-              type="file"
-              class="hidden"
-              @change="handleGuideUpload(entry.name, $event)"
-            />
-          </div>
-          <!-- Info -->
-          <div class="px-3 pt-3 pb-2 space-y-1 flex-1">
-            <p class="text-base font-semibold leading-snug break-words">{{ stripExtension(entry.name) }}</p>
-            <p class="text-xs text-muted-foreground">{{ formatSize(entry.size) }}</p>
-          </div>
-          <!-- Action bar -->
-          <div class="flex items-center border-t border-border mt-auto">
-            <button
-              class="flex-1 flex items-center justify-center py-2"
-              :class="guideUploaded.has(entry.name) ? 'text-accent' : 'text-muted-foreground hover:text-accent hover:bg-muted/50'"
-              @click.stop="triggerGuideUpload(entry.name)"
-            >
-              <CheckCircle v-if="guideUploaded.has(entry.name)" class="h-4 w-4" />
-              <BookOpen v-else class="h-4 w-4" />
-            </button>
-            <button
-              class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50 border-l border-border"
-              @click.stop="startRename(entry.name)"
-            >
-              <Pencil class="h-4 w-4" />
-            </button>
-            <button
-              class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-accent hover:bg-muted/50 border-l border-border"
-              @click.stop="startMove(entry.name)"
-            >
-              <MoveRight class="h-4 w-4" />
-            </button>
-            <button
-              class="flex-1 flex items-center justify-center py-2 text-muted-foreground hover:text-destructive hover:bg-muted/50 border-l border-border"
-              :disabled="deleting === entry.name"
-              @click.stop="handleDelete(entry.name)"
-            >
-              <Trash2 class="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </template>
 
     <!-- Standard file list -->
     <div v-else class="rounded-xl border border-border overflow-hidden">
