@@ -72,7 +72,17 @@ async function doUpload(files: File[]) {
   }
 }
 
+let dragDepth = 0
+function onDragEnter() {
+  dragDepth++
+  dragOver.value = true
+}
+function onDragLeave() {
+  dragDepth = Math.max(0, dragDepth - 1)
+  if (dragDepth === 0) dragOver.value = false
+}
 function onDrop(event: DragEvent) {
+  dragDepth = 0
   dragOver.value = false
   doUpload(Array.from(event.dataTransfer?.files ?? []))
 }
@@ -100,7 +110,15 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl p-6 space-y-6">
+  <div
+    class="relative mx-auto max-w-6xl p-6 space-y-6"
+    @dragenter.prevent="onDragEnter"
+    @dragover.prevent
+    @dragleave.prevent="onDragLeave"
+    @drop.prevent="onDrop"
+  >
+    <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
+
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard' })">
         <ArrowLeft class="h-5 w-5" />
@@ -125,7 +143,27 @@ onMounted(load)
           </div>
           <div class="font-bold text-base text-foreground">Overlays</div>
         </button>
+        <button
+          class="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
+          :disabled="uploading"
+          @click="fileInput?.click()"
+        >
+          <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-accent/15">
+            <Upload class="h-5 w-5 text-accent" />
+          </div>
+          <div class="font-bold text-base text-foreground">Add ROMs</div>
+        </button>
       </div>
+    </div>
+
+    <div v-if="uploading" class="rounded-lg border border-border bg-card p-3 space-y-2">
+      <div class="flex items-center justify-between text-sm">
+        <span class="text-foreground font-medium truncate">
+          {{ uploadName }}<span v-if="uploadTotal > 1" class="text-foreground/60 font-normal"> ({{ uploadCurrent }} of {{ uploadTotal }})</span>
+        </span>
+        <span class="font-mono text-foreground/60 ml-2 shrink-0">{{ uploadProgress }}%</span>
+      </div>
+      <Progress :value="uploadProgress" class="!h-2.5" />
     </div>
 
     <div class="flex items-center justify-between gap-3">
@@ -182,29 +220,11 @@ onMounted(load)
     <GameTable v-else :games="filtered" @open="openGame" />
 
     <div
-      class="rounded-xl border-2 border-dashed p-5 text-center transition-colors"
-      :class="dragOver ? 'border-accent bg-accent/5' : 'border-border'"
-      @dragover.prevent="dragOver = true"
-      @dragleave="dragOver = false"
-      @drop.prevent="onDrop"
+      v-if="dragOver"
+      class="absolute inset-2 z-20 rounded-2xl border-2 border-dashed border-accent bg-background/90 flex flex-col items-center justify-center gap-3 pointer-events-none"
     >
-      <template v-if="!uploading">
-        <Upload class="h-7 w-7 mx-auto text-foreground/50" />
-        <p class="text-sm text-foreground/70 mt-2">
-          Drag ROM files here or
-          <button class="font-semibold text-accent hover:text-tan-light" @click="fileInput?.click()">browse to upload</button>
-        </p>
-        <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
-      </template>
-      <div v-else class="space-y-2">
-        <div class="flex items-center justify-between text-sm">
-          <span class="text-foreground font-medium truncate">
-            {{ uploadName }}<span v-if="uploadTotal > 1" class="text-foreground/60 font-normal"> ({{ uploadCurrent }} of {{ uploadTotal }})</span>
-          </span>
-          <span class="font-mono text-foreground/60 ml-2 shrink-0">{{ uploadProgress }}%</span>
-        </div>
-        <Progress :value="uploadProgress" class="!h-3" />
-      </div>
+      <Upload class="h-10 w-10 text-accent" />
+      <p class="text-lg font-semibold text-foreground">Drop ROM files to upload</p>
     </div>
   </div>
 </template>
