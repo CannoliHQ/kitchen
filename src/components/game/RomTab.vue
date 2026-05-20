@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { listGameRoms, downloadGameRomFile, deleteGameRomFile, type GameRomFile } from '@/api/client'
-import { Gamepad2, Download, Trash2 } from 'lucide-vue-next'
+import { listGameRoms, downloadGameRomFile, type GameRomFile } from '@/api/client'
+import { Gamepad2, Download } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; id: number }>()
 
 const files = ref<GameRomFile[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const busy = ref(false)
 
 function formatSize(n: number) {
   if (n <= 0) return '-'
@@ -35,19 +34,6 @@ async function onDownload(f: GameRomFile) {
   try {
     await downloadGameRomFile(props.tag, props.id, f.path, f.name)
   } catch { error.value = 'Download failed' }
-}
-
-async function onDelete(f: GameRomFile) {
-  if (!confirm(`Delete ${f.name}?`)) return
-  busy.value = true
-  try {
-    await deleteGameRomFile(props.tag, props.id, f.path)
-    await load()
-  } catch {
-    error.value = 'Delete failed'
-  } finally {
-    busy.value = false
-  }
 }
 
 onMounted(load)
@@ -78,24 +64,13 @@ onMounted(load)
           <div class="text-base font-semibold text-foreground truncate">{{ f.name }}</div>
           <div class="text-sm text-foreground/60">{{ formatSize(f.size) }}</div>
         </div>
-        <div class="flex gap-1.5 shrink-0">
-          <button
-            class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-40"
-            :disabled="busy"
-            title="Download"
-            @click="onDownload(f)"
-          >
-            <Download class="h-4 w-4" />
-          </button>
-          <button
-            class="p-2 rounded text-foreground/70 hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
-            :disabled="busy"
-            title="Delete"
-            @click="onDelete(f)"
-          >
-            <Trash2 class="h-4 w-4" />
-          </button>
-        </div>
+        <button
+          class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground shrink-0"
+          title="Download"
+          @click="onDownload(f)"
+        >
+          <Download class="h-4 w-4" />
+        </button>
       </div>
     </div>
   </div>

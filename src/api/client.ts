@@ -212,9 +212,14 @@ export async function downloadGameRomFile(tag: string, id: number, path: string,
   await downloadFile(`${gameBase(tag, id)}/rom?file=${encodeURIComponent(path)}`, filename)
 }
 
-export async function deleteGameRomFile(tag: string, id: number, path: string): Promise<void> {
-  const res = await request(`${gameBase(tag, id)}/rom?file=${encodeURIComponent(path)}`, { method: 'DELETE' })
-  if (!res.ok) throw new Error(`deleteGameRomFile ${res.status}`)
+export async function deleteGame(tag: string, id: number, purge: boolean): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}${purge ? '?purge=true' : ''}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteGame ${res.status}`)
+}
+
+export async function rescanPlatform(tag: string): Promise<void> {
+  const res = await request(`/api/scan/${encodeURIComponent(tag)}`, { method: 'POST' })
+  if (!res.ok) throw new Error(`rescanPlatform ${res.status}`)
 }
 
 export async function listGameSaves(tag: string, id: number): Promise<GameFile[]> {

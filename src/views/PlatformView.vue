@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getGames, uploadFiles, type GameRow } from '@/api/client'
+import { getGames, uploadFiles, rescanPlatform, type GameRow } from '@/api/client'
 import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -64,6 +64,7 @@ async function doUpload(files: File[]) {
       const { promise } = uploadFiles('roms', [props.tag], [file], pct => { uploadProgress.value = pct })
       await promise
     }
+    await rescanPlatform(props.tag)
     await load()
   } catch {
     error.value = 'ROM upload failed'

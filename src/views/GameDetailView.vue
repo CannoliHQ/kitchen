@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { gameArtBlob, uploadGameArt, deleteGameArt, getGame, type GameDetail } from '@/api/client'
+import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, type GameDetail } from '@/api/client'
 import { platformLabel } from '@/api/platforms'
 import { coverColor, coverColorDark } from '@/lib/coverColor'
 import Button from '@/components/ui/Button.vue'
@@ -23,6 +23,9 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const artSrc = ref<string | null>(null)
 const artBusy = ref(false)
+const showDelete = ref(false)
+const purge = ref(false)
+const deleting = ref(false)
 
 const activeTab = computed<TabKey>(() =>
   TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'rom',
@@ -126,6 +129,18 @@ async function onDeleteArt() {
   }
 }
 
+async function confirmDelete() {
+  deleting.value = true
+  try {
+    await deleteGame(props.tag, romId.value, purge.value)
+    router.push({ name: 'platform', params: { tag: props.tag } })
+  } catch {
+    error.value = 'Failed to delete game'
+    deleting.value = false
+    showDelete.value = false
+  }
+}
+
 onMounted(loadGame)
 onBeforeUnmount(() => {
   if (artSrc.value) URL.revokeObjectURL(artSrc.value)
@@ -140,13 +155,21 @@ onBeforeUnmount(() => {
       <Button variant="outline" size="sm" @click="loadGame">Retry</Button>
     </div>
     <template v-else-if="game">
-      <button
-        class="flex items-center gap-1.5 -ml-1 mb-4 text-foreground/70 hover:text-foreground transition-colors"
-        @click="router.push({ name: 'platform', params: { tag: props.tag } })"
-      >
-        <ArrowLeft class="h-5 w-5" />
-        <span class="text-base font-medium">{{ platformLabel(props.tag) }}</span>
-      </button>
+      <div class="flex items-center justify-between mb-4">
+        <button
+          class="flex items-center gap-1.5 -ml-1 text-foreground/70 hover:text-foreground transition-colors"
+          @click="router.push({ name: 'platform', params: { tag: props.tag } })"
+        >
+          <ArrowLeft class="h-5 w-5" />
+          <span class="text-base font-medium">{{ platformLabel(props.tag) }}</span>
+        </button>
+        <button
+          class="flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-destructive transition-colors"
+          @click="showDelete = true"
+        >
+          <Trash2 class="h-4 w-4" /> Delete game
+        </button>
+      </div>
 
       <div class="relative rounded-xl overflow-hidden" :style="artSrc ? undefined : heroStyle">
         <template v-if="artSrc">
@@ -233,6 +256,31 @@ onBeforeUnmount(() => {
           <StatesTab v-else-if="activeTab === 'states'" :tag="tag" :id="romId" :rom-name="game.rom" />
           <GuidesTab v-else-if="activeTab === 'guides'" :tag="tag" :id="romId" />
         </keep-alive>
+      </div>
+
+      <div
+        v-if="showDelete"
+        class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+        @click.self="showDelete = false"
+      >
+        <div class="bg-card border border-border rounded-xl p-5 w-full max-w-sm space-y-4">
+          <div>
+            <h2 class="text-lg font-bold text-foreground">Delete game?</h2>
+            <p class="text-sm text-foreground/70 mt-1">
+              {{ game.displayName }} will be removed from the library.
+            </p>
+          </div>
+          <label class="flex items-center gap-2.5 text-sm text-foreground/85 cursor-pointer">
+            <input type="checkbox" v-model="purge" class="h-4 w-4 accent-destructive" />
+            Also delete saves, save states, box art, and guides
+          </label>
+          <div class="flex justify-end gap-2">
+            <Button variant="ghost" :disabled="deleting" @click="showDelete = false">Cancel</Button>
+            <Button variant="destructive" :disabled="deleting" @click="confirmDelete">
+              {{ deleting ? 'Deleting...' : 'Delete' }}
+            </Button>
+          </div>
+        </div>
       </div>
     </template>
   </div>
