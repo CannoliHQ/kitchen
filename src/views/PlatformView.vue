@@ -2,13 +2,13 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGames, uploadFiles, type GameRow } from '@/api/client'
-import { platformLabel, platformIcon } from '@/api/platforms'
+import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
 import GameCover from '@/components/game/GameCover.vue'
 import GameTable from '@/components/game/GameTable.vue'
-import { ArrowLeft, Cpu, LayoutGrid, Layers, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Cpu, LayoutGrid, Layers, Plus, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string }>()
 const router = useRouter()
@@ -162,13 +162,7 @@ onBeforeUnmount(() => {
           @click="fileInput?.click()"
         >
           <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <img
-              v-if="platformIcon(props.tag)"
-              :src="platformIcon(props.tag)"
-              :alt="props.tag"
-              class="h-5 w-5 object-contain"
-            />
-            <Upload v-else class="h-4 w-4 text-accent" />
+            <Plus class="h-4 w-4 text-accent" />
           </div>
           <div class="font-semibold text-sm text-foreground">Add ROMs</div>
         </button>
