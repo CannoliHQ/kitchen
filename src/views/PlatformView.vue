@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGames, uploadFiles, type GameRow } from '@/api/client'
-import { platformLabel } from '@/api/platforms'
+import { platformLabel, platformIcon } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
@@ -73,18 +73,25 @@ async function doUpload(files: File[]) {
 }
 
 let dragDepth = 0
-function onDragEnter() {
+function onWindowDragEnter(e: DragEvent) {
+  if (!e.dataTransfer?.types.includes('Files')) return
+  e.preventDefault()
   dragDepth++
   dragOver.value = true
 }
-function onDragLeave() {
+function onWindowDragOver(e: DragEvent) {
+  e.preventDefault()
+}
+function onWindowDragLeave(e: DragEvent) {
+  e.preventDefault()
   dragDepth = Math.max(0, dragDepth - 1)
   if (dragDepth === 0) dragOver.value = false
 }
-function onDrop(event: DragEvent) {
+function onWindowDrop(e: DragEvent) {
+  e.preventDefault()
   dragDepth = 0
   dragOver.value = false
-  doUpload(Array.from(event.dataTransfer?.files ?? []))
+  doUpload(Array.from(e.dataTransfer?.files ?? []))
 }
 
 function handleFiles(event: Event) {
@@ -106,17 +113,23 @@ function openOverlays() {
   router.push({ name: 'browse', params: { resource: 'overlays', tag: props.tag } })
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  window.addEventListener('dragenter', onWindowDragEnter)
+  window.addEventListener('dragover', onWindowDragOver)
+  window.addEventListener('dragleave', onWindowDragLeave)
+  window.addEventListener('drop', onWindowDrop)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('dragenter', onWindowDragEnter)
+  window.removeEventListener('dragover', onWindowDragOver)
+  window.removeEventListener('dragleave', onWindowDragLeave)
+  window.removeEventListener('drop', onWindowDrop)
+})
 </script>
 
 <template>
-  <div
-    class="relative mx-auto max-w-6xl p-6 space-y-6"
-    @dragenter.prevent="onDragEnter"
-    @dragover.prevent
-    @dragleave.prevent="onDragLeave"
-    @drop.prevent="onDrop"
-  >
+  <div class="mx-auto max-w-6xl p-6 space-y-6">
     <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
 
     <div class="flex items-center gap-3">
@@ -124,34 +137,40 @@ onMounted(load)
         <ArrowLeft class="h-5 w-5" />
       </Button>
       <h1 class="text-3xl font-bold tracking-tight">{{ platformLabel(props.tag) }}</h1>
-      <div class="ml-auto flex gap-3">
+      <div class="ml-auto flex gap-2">
         <button
-          class="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-accent/50 transition-colors"
+          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
           @click="openBios"
         >
-          <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-accent/15">
-            <Cpu class="h-5 w-5 text-accent" />
+          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
+            <Cpu class="h-4 w-4 text-accent" />
           </div>
-          <div class="font-bold text-base text-foreground">BIOS</div>
+          <div class="font-semibold text-sm text-foreground">BIOS</div>
         </button>
         <button
-          class="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-accent/50 transition-colors"
+          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
           @click="openOverlays"
         >
-          <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-accent/15">
-            <Layers class="h-5 w-5 text-accent" />
+          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
+            <Layers class="h-4 w-4 text-accent" />
           </div>
-          <div class="font-bold text-base text-foreground">Overlays</div>
+          <div class="font-semibold text-sm text-foreground">Overlays</div>
         </button>
         <button
-          class="rounded-xl border border-border bg-card px-4 py-3 flex items-center gap-3 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
+          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
           :disabled="uploading"
           @click="fileInput?.click()"
         >
-          <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-accent/15">
-            <Upload class="h-5 w-5 text-accent" />
+          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
+            <img
+              v-if="platformIcon(props.tag)"
+              :src="platformIcon(props.tag)"
+              :alt="props.tag"
+              class="h-5 w-5 object-contain"
+            />
+            <Upload v-else class="h-4 w-4 text-accent" />
           </div>
-          <div class="font-bold text-base text-foreground">Add ROMs</div>
+          <div class="font-semibold text-sm text-foreground">Add ROMs</div>
         </button>
       </div>
     </div>
@@ -221,10 +240,10 @@ onMounted(load)
 
     <div
       v-if="dragOver"
-      class="absolute inset-2 z-20 rounded-2xl border-2 border-dashed border-accent bg-background/90 flex flex-col items-center justify-center gap-3 pointer-events-none"
+      class="fixed inset-0 z-50 border-4 border-dashed border-accent bg-background/90 flex flex-col items-center justify-center gap-3 pointer-events-none"
     >
-      <Upload class="h-10 w-10 text-accent" />
-      <p class="text-lg font-semibold text-foreground">Drop ROM files to upload</p>
+      <Upload class="h-12 w-12 text-accent" />
+      <p class="text-xl font-semibold text-foreground">Drop ROM files to upload</p>
     </div>
   </div>
 </template>
