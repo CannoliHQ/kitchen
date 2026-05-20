@@ -139,6 +139,16 @@ onBeforeUnmount(() => {
       <h1 class="text-3xl font-bold tracking-tight">{{ platformLabel(props.tag) }}</h1>
       <div class="ml-auto flex gap-2">
         <button
+          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
+          :disabled="uploading"
+          @click="fileInput?.click()"
+        >
+          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
+            <Plus class="h-4 w-4 text-accent" />
+          </div>
+          <div class="font-semibold text-sm text-foreground">Roms</div>
+        </button>
+        <button
           class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
           @click="openBios"
         >
@@ -155,16 +165,6 @@ onBeforeUnmount(() => {
             <Layers class="h-4 w-4 text-accent" />
           </div>
           <div class="font-semibold text-sm text-foreground">Overlays</div>
-        </button>
-        <button
-          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
-          :disabled="uploading"
-          @click="fileInput?.click()"
-        >
-          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <Plus class="h-4 w-4 text-accent" />
-          </div>
-          <div class="font-semibold text-sm text-foreground">Add ROMs</div>
         </button>
       </div>
     </div>
