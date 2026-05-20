@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getGames, type GameRow } from '@/api/client'
+import { getGames, uploadFiles, type GameRow } from '@/api/client'
 import { platformLabel } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
+import Progress from '@/components/ui/Progress.vue'
 import GameCover from '@/components/game/GameCover.vue'
 import GameTable from '@/components/game/GameTable.vue'
-import { ArrowLeft, Cpu, LayoutGrid, Layers, Table as TableIcon, Search } from 'lucide-vue-next'
+import { ArrowLeft, Cpu, LayoutGrid, Layers, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string }>()
 const router = useRouter()
@@ -39,6 +40,48 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+const fileInput = ref<HTMLInputElement>()
+const dragOver = ref(false)
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const uploadName = ref('')
+const uploadCurrent = ref(0)
+const uploadTotal = ref(0)
+
+async function doUpload(files: File[]) {
+  if (!files.length || uploading.value) return
+  uploading.value = true
+  error.value = null
+  uploadTotal.value = files.length
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]!
+      uploadCurrent.value = i + 1
+      uploadName.value = file.name
+      uploadProgress.value = 0
+      const { promise } = uploadFiles('roms', [props.tag], [file], pct => { uploadProgress.value = pct })
+      await promise
+    }
+    await load()
+  } catch {
+    error.value = 'ROM upload failed'
+  } finally {
+    uploading.value = false
+  }
+}
+
+function onDrop(event: DragEvent) {
+  dragOver.value = false
+  doUpload(Array.from(event.dataTransfer?.files ?? []))
+}
+
+function handleFiles(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  doUpload(files)
 }
 
 function openGame(id: number) {
@@ -137,5 +180,31 @@ onMounted(load)
       </button>
     </div>
     <GameTable v-else :games="filtered" @open="openGame" />
+
+    <div
+      class="rounded-xl border-2 border-dashed p-5 text-center transition-colors"
+      :class="dragOver ? 'border-accent bg-accent/5' : 'border-border'"
+      @dragover.prevent="dragOver = true"
+      @dragleave="dragOver = false"
+      @drop.prevent="onDrop"
+    >
+      <template v-if="!uploading">
+        <Upload class="h-7 w-7 mx-auto text-foreground/50" />
+        <p class="text-sm text-foreground/70 mt-2">
+          Drag ROM files here or
+          <button class="font-semibold text-accent hover:text-tan-light" @click="fileInput?.click()">browse to upload</button>
+        </p>
+        <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
+      </template>
+      <div v-else class="space-y-2">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-foreground font-medium truncate">
+            {{ uploadName }}<span v-if="uploadTotal > 1" class="text-foreground/60 font-normal"> ({{ uploadCurrent }} of {{ uploadTotal }})</span>
+          </span>
+          <span class="font-mono text-foreground/60 ml-2 shrink-0">{{ uploadProgress }}%</span>
+        </div>
+        <Progress :value="uploadProgress" class="!h-3" />
+      </div>
+    </div>
   </div>
 </template>
