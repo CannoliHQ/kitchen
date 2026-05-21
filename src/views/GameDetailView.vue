@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, type GameDetail } from '@/api/client'
-import { platformLabel } from '@/api/platforms'
+import { platformName } from '@/api/platforms'
 import { coverColor, coverColorDark } from '@/lib/coverColor'
 import Button from '@/components/ui/Button.vue'
 import { ArrowLeft, ImagePlus, Upload, Trash2 } from 'lucide-vue-next'
@@ -161,7 +161,7 @@ onBeforeUnmount(() => {
           @click="router.push({ name: 'platform', params: { tag: props.tag } })"
         >
           <ArrowLeft class="h-5 w-5" />
-          <span class="text-base font-medium">{{ platformLabel(props.tag) }}</span>
+          <span class="text-base font-medium">{{ platformName(props.tag) }}</span>
         </button>
         <button
           class="flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-destructive transition-colors"
