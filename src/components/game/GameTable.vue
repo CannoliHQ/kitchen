@@ -5,7 +5,7 @@ import type { GameRow } from '@/api/client'
 const props = defineProps<{ games: GameRow[] }>()
 defineEmits<{ open: [id: number] }>()
 
-type SortKey = 'title' | 'size' | 'saves' | 'states' | 'guides' | 'played'
+type SortKey = 'title' | 'saves' | 'states' | 'guides' | 'played'
 
 const sortKey = ref<SortKey>('title')
 const sortDir = ref<1 | -1>(1)
@@ -26,7 +26,6 @@ const sorted = computed(() => {
     let r = 0
     switch (sortKey.value) {
       case 'title': r = a.displayName.localeCompare(b.displayName); break
-      case 'size': r = a.size - b.size; break
       case 'saves': r = a.savesCount - b.savesCount; break
       case 'states': r = a.statesCount - b.statesCount; break
       case 'guides': r = a.guidesCount - b.guidesCount; break
@@ -36,15 +35,6 @@ const sorted = computed(() => {
   })
   return arr
 })
-
-function formatSize(n: number) {
-  if (n <= 0) return '-'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let v = n
-  let u = 0
-  while (v >= 1024 && u < units.length - 1) { v /= 1024; u++ }
-  return `${v.toFixed(v >= 10 || u === 0 ? 0 : 1)} ${units[u]}`
-}
 
 function formatPlayed(ms: number | null) {
   if (!ms) return 'Never'
@@ -59,7 +49,6 @@ function formatPlayed(ms: number | null) {
 
 const columns: { key: SortKey; label: string; align: string }[] = [
   { key: 'title', label: 'Title', align: 'text-left' },
-  { key: 'size', label: 'Size', align: 'text-right' },
   { key: 'saves', label: 'Saves', align: 'text-center' },
   { key: 'states', label: 'States', align: 'text-center' },
   { key: 'guides', label: 'Guides', align: 'text-center' },
@@ -76,7 +65,7 @@ const columns: { key: SortKey; label: string; align: string }[] = [
             v-for="col in columns"
             :key="col.key"
             class="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-foreground/60 border-b border-border cursor-pointer select-none hover:text-foreground"
-            :class="[col.align, col.key === 'size' || col.key === 'played' ? '' : '', col.key === 'saves' || col.key === 'states' || col.key === 'guides' ? 'w-20' : '']"
+            :class="[col.align, col.key === 'saves' || col.key === 'states' || col.key === 'guides' ? 'w-20' : '']"
             @click="setSort(col.key)"
           >
             {{ col.label }}<span v-if="sortKey === col.key"> {{ sortDir === 1 ? '▴' : '▾' }}</span>
@@ -92,7 +81,6 @@ const columns: { key: SortKey; label: string; align: string }[] = [
           @click="$emit('open', g.id)"
         >
           <td class="px-3 py-2.5 font-semibold text-foreground">{{ g.displayName }}</td>
-          <td class="px-3 py-2.5 text-right text-foreground/80">{{ formatSize(g.size) }}</td>
           <td class="px-3 py-2.5 text-center" :class="g.savesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.savesCount || '—' }}</td>
           <td class="px-3 py-2.5 text-center" :class="g.statesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.statesCount || '—' }}</td>
           <td class="px-3 py-2.5 text-center" :class="g.guidesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.guidesCount || '—' }}</td>

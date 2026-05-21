@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGames, uploadFiles, rescanPlatform, type GameRow } from '@/api/client'
-import { platformLabel } from '@/api/platforms'
+import { platformName } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
@@ -133,12 +133,14 @@ onBeforeUnmount(() => {
   <div class="mx-auto max-w-6xl p-6 space-y-6">
     <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
 
-    <div class="flex items-center gap-3">
-      <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard' })">
-        <ArrowLeft class="h-5 w-5" />
-      </Button>
-      <h1 class="text-3xl font-bold tracking-tight">{{ platformLabel(props.tag) }}</h1>
-      <div class="ml-auto flex gap-2">
+    <div class="space-y-3">
+      <div class="flex items-center gap-3">
+        <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard' })">
+          <ArrowLeft class="h-5 w-5" />
+        </Button>
+        <h1 class="text-3xl font-bold tracking-tight">{{ platformName(props.tag) }}</h1>
+      </div>
+      <div class="flex flex-wrap gap-2">
         <button
           class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
           :disabled="uploading"
