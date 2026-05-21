@@ -8,7 +8,7 @@ import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
 import GameCover from '@/components/game/GameCover.vue'
 import GameTable from '@/components/game/GameTable.vue'
-import { ArrowLeft, Cpu, Gamepad2, LayoutGrid, Layers, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Cpu, Gamepad2, Image, LayoutGrid, Layers, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string }>()
 const router = useRouter()
@@ -28,6 +28,47 @@ const filtered = computed(() => {
   if (!q) return games.value
   return games.value.filter(g => g.displayName.toLowerCase().includes(q))
 })
+
+const PAGE_SIZE = 100
+const page = ref(1)
+const sortKey = ref<string>('title')
+const sortDir = ref<1 | -1>(1)
+
+function setSort(key: string) {
+  if (sortKey.value === key) {
+    sortDir.value = (sortDir.value * -1) as 1 | -1
+  } else {
+    sortKey.value = key
+    sortDir.value = 1
+  }
+}
+
+const ordered = computed(() => {
+  if (viewMode.value !== 'table') return filtered.value
+  const arr = [...filtered.value]
+  const d = sortDir.value
+  arr.sort((a, b) => {
+    let r: number
+    switch (sortKey.value) {
+      case 'saves': r = a.savesCount - b.savesCount; break
+      case 'states': r = a.statesCount - b.statesCount; break
+      case 'guides': r = a.guidesCount - b.guidesCount; break
+      case 'played': r = (a.lastPlayedAt ?? 0) - (b.lastPlayedAt ?? 0); break
+      default: r = a.displayName.localeCompare(b.displayName)
+    }
+    return r * d
+  })
+  return arr
+})
+
+const pageCount = computed(() => Math.max(1, Math.ceil(ordered.value.length / PAGE_SIZE)))
+const paged = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE
+  return ordered.value.slice(start, start + PAGE_SIZE)
+})
+
+watch([search, viewMode, sortKey, sortDir], () => { page.value = 1 })
+watch(pageCount, pc => { if (page.value > pc) page.value = pc })
 
 async function load() {
   loading.value = true
@@ -114,6 +155,10 @@ function openOverlays() {
   router.push({ name: 'browse', params: { resource: 'overlays', tag: props.tag } })
 }
 
+function openArt() {
+  router.push({ name: 'browse', params: { resource: 'art', tag: props.tag } })
+}
+
 onMounted(() => {
   load()
   window.addEventListener('dragenter', onWindowDragEnter)
@@ -153,12 +198,12 @@ onBeforeUnmount(() => {
         </button>
         <button
           class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
-          @click="openBios"
+          @click="openArt"
         >
           <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <Cpu class="h-4 w-4 text-accent" />
+            <Image class="h-4 w-4 text-accent" />
           </div>
-          <div class="font-semibold text-sm text-foreground">BIOS</div>
+          <div class="font-semibold text-sm text-foreground">Art</div>
         </button>
         <button
           class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
@@ -168,6 +213,15 @@ onBeforeUnmount(() => {
             <Layers class="h-4 w-4 text-accent" />
           </div>
           <div class="font-semibold text-sm text-foreground">Overlays</div>
+        </button>
+        <button
+          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
+          @click="openBios"
+        >
+          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
+            <Cpu class="h-4 w-4 text-accent" />
+          </div>
+          <div class="font-semibold text-sm text-foreground">BIOS</div>
         </button>
       </div>
     </div>
@@ -183,32 +237,29 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="flex items-center justify-between gap-3">
-      <h2 class="text-base font-semibold text-foreground/85">Games ({{ filtered.length }})</h2>
-      <div class="flex items-center gap-2">
-        <div class="flex rounded-lg border border-border overflow-hidden">
-          <button
-            class="p-2 transition-colors"
-            :class="viewMode === 'cards' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
-            :aria-pressed="viewMode === 'cards'"
-            title="Card view"
-            @click="viewMode = 'cards'"
-          >
-            <LayoutGrid class="h-4 w-4" />
-          </button>
-          <button
-            class="p-2 transition-colors border-l border-border"
-            :class="viewMode === 'table' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
-            :aria-pressed="viewMode === 'table'"
-            title="Table view"
-            @click="viewMode = 'table'"
-          >
-            <TableIcon class="h-4 w-4" />
-          </button>
-        </div>
-        <div class="relative w-64">
-          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/70 pointer-events-none" />
-          <Input v-model="search" placeholder="Search games..." class="!pl-9 !h-10 !text-base !rounded-lg" />
-        </div>
+      <div class="relative w-64">
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/70 pointer-events-none" />
+        <Input v-model="search" placeholder="Search games..." class="!pl-9 !h-10 !text-base !rounded-lg" />
+      </div>
+      <div class="flex rounded-lg border border-border overflow-hidden">
+        <button
+          class="p-2 transition-colors"
+          :class="viewMode === 'cards' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
+          :aria-pressed="viewMode === 'cards'"
+          title="Card view"
+          @click="viewMode = 'cards'"
+        >
+          <LayoutGrid class="h-4 w-4" />
+        </button>
+        <button
+          class="p-2 transition-colors border-l border-border"
+          :class="viewMode === 'table' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
+          :aria-pressed="viewMode === 'table'"
+          title="Table view"
+          @click="viewMode = 'table'"
+        >
+          <TableIcon class="h-4 w-4" />
+        </button>
       </div>
     </div>
 
@@ -225,7 +276,7 @@ onBeforeUnmount(() => {
       class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4"
     >
       <button
-        v-for="game in filtered"
+        v-for="game in paged"
         :key="game.id"
         class="text-left transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 rounded-lg"
         @click="openGame(game.id)"
@@ -233,7 +284,23 @@ onBeforeUnmount(() => {
         <GameCover :tag="props.tag" :game="game" />
       </button>
     </div>
-    <GameTable v-else :games="filtered" @open="openGame" />
+    <GameTable
+      v-else
+      :games="paged"
+      :sort-key="sortKey"
+      :sort-dir="sortDir"
+      @open="openGame"
+      @sort="setSort"
+    />
+
+    <div v-if="!loading && !error && filtered.length" class="flex flex-col items-center gap-3 pt-1">
+      <div v-if="pageCount > 1" class="flex items-center gap-3">
+        <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--">Prev</Button>
+        <span class="text-sm text-foreground/70">Page {{ page }} of {{ pageCount }}</span>
+        <Button variant="outline" size="sm" :disabled="page >= pageCount" @click="page++">Next</Button>
+      </div>
+      <div class="text-sm text-foreground/60">{{ filtered.length }} game{{ filtered.length === 1 ? '' : 's' }}</div>
+    </div>
 
     <div
       v-if="dragOver"

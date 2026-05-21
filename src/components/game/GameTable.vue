@@ -1,40 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import type { GameRow } from '@/api/client'
 
-const props = defineProps<{ games: GameRow[] }>()
-defineEmits<{ open: [id: number] }>()
-
-type SortKey = 'title' | 'saves' | 'states' | 'guides' | 'played'
-
-const sortKey = ref<SortKey>('title')
-const sortDir = ref<1 | -1>(1)
-
-function setSort(key: SortKey) {
-  if (sortKey.value === key) {
-    sortDir.value = (sortDir.value * -1) as 1 | -1
-  } else {
-    sortKey.value = key
-    sortDir.value = 1
-  }
-}
-
-const sorted = computed(() => {
-  const arr = [...props.games]
-  const d = sortDir.value
-  arr.sort((a, b) => {
-    let r = 0
-    switch (sortKey.value) {
-      case 'title': r = a.displayName.localeCompare(b.displayName); break
-      case 'saves': r = a.savesCount - b.savesCount; break
-      case 'states': r = a.statesCount - b.statesCount; break
-      case 'guides': r = a.guidesCount - b.guidesCount; break
-      case 'played': r = (a.lastPlayedAt ?? 0) - (b.lastPlayedAt ?? 0); break
-    }
-    return r * d
-  })
-  return arr
-})
+defineProps<{
+  games: GameRow[]
+  sortKey: string
+  sortDir: 1 | -1
+}>()
+defineEmits<{ open: [id: number]; sort: [key: string] }>()
 
 function formatPlayed(ms: number | null) {
   if (!ms) return 'Never'
@@ -47,7 +19,7 @@ function formatPlayed(ms: number | null) {
   return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-const columns: { key: SortKey; label: string; align: string }[] = [
+const columns: { key: string; label: string; align: string }[] = [
   { key: 'title', label: 'Title', align: 'text-left' },
   { key: 'saves', label: 'Saves', align: 'text-center' },
   { key: 'states', label: 'States', align: 'text-center' },
@@ -66,7 +38,7 @@ const columns: { key: SortKey; label: string; align: string }[] = [
             :key="col.key"
             class="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-foreground/60 border-b border-border cursor-pointer select-none hover:text-foreground"
             :class="[col.align, col.key === 'saves' || col.key === 'states' || col.key === 'guides' ? 'w-20' : '']"
-            @click="setSort(col.key)"
+            @click="$emit('sort', col.key)"
           >
             {{ col.label }}<span v-if="sortKey === col.key"> {{ sortDir === 1 ? '▴' : '▾' }}</span>
           </th>
@@ -74,7 +46,7 @@ const columns: { key: SortKey; label: string; align: string }[] = [
       </thead>
       <tbody>
         <tr
-          v-for="(g, idx) in sorted"
+          v-for="(g, idx) in games"
           :key="g.id"
           class="cursor-pointer hover:bg-muted/50"
           :class="idx % 2 === 1 ? 'bg-muted/20' : ''"

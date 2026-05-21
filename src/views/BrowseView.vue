@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, type FileEntry } from '@/api/client'
-import { platformLabel } from '@/api/platforms'
+import { platformName } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
@@ -68,7 +68,7 @@ const resourceLabel = computed(() => {
   const labels: Record<string, string> = {
     roms: 'ROMs', art: 'Box Art', saves: 'Saves',
     states: 'Save States', bios: 'BIOS', wallpapers: 'Wallpapers',
-    guides: 'Guides',
+    guides: 'Guides', overlays: 'Overlays', shaders: 'Shaders',
   }
   return labels[props.resource] ?? props.resource
 })
@@ -77,7 +77,7 @@ const title = computed(() => {
   if ((props.resource === 'guides' || props.resource === 'states') && subpath.value.length) {
     return `${resourceLabel.value} - ${subpath.value[subpath.value.length - 1]}`
   }
-  return props.tag ? `${resourceLabel.value} - ${platformLabel(props.tag)}` : resourceLabel.value
+  return props.tag ? `${resourceLabel.value} - ${platformName(props.tag)}` : resourceLabel.value
 })
 
 /** Breadcrumb segments for navigation */
@@ -478,21 +478,16 @@ onMounted(load)
       <FolderPlus class="h-8 w-8 mx-auto text-muted-foreground" />
       <p class="mt-3 text-sm font-medium text-muted-foreground">{{ props.resource === 'guides' ? 'Add guides for a game' : 'Add save states for a game' }}</p>
     </div>
-    <div v-else-if="props.resource === 'art' && props.tag" class="space-y-2">
-      <div
-        class="rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-150 border-border hover:border-accent/50 hover:bg-accent/5"
-        @click="openArtPicker"
-      >
-        <ImagePlus class="h-8 w-8 mx-auto text-muted-foreground" />
-        <p class="mt-3 text-sm font-medium text-muted-foreground">Add box art for a game</p>
-      </div>
-      <div class="flex justify-center">
-        <Button variant="outline" size="sm" @click="bulkArtInput?.click()">
-          <Upload class="h-4 w-4" />
-          Bulk Upload Pre-Named Files
-        </Button>
-        <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtUpload" />
-      </div>
+    <div v-else-if="props.resource === 'art' && props.tag" class="flex flex-wrap justify-center gap-2">
+      <Button variant="outline" size="sm" @click="openArtPicker">
+        <ImagePlus class="h-4 w-4" />
+        Add box art for a game
+      </Button>
+      <Button variant="outline" size="sm" @click="bulkArtInput?.click()">
+        <Upload class="h-4 w-4" />
+        Bulk Upload Pre-Named Files
+      </Button>
+      <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtUpload" />
     </div>
     <div v-else-if="!['guides', 'states', 'art', 'bios', 'saves'].includes(props.resource)" class="flex items-center gap-2">
       <Button variant="outline" size="sm" @click="showNewFolder = !showNewFolder">
