@@ -133,14 +133,14 @@ onBeforeUnmount(() => {
   <div class="mx-auto max-w-6xl p-6 space-y-6">
     <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
 
-    <div class="space-y-3">
+    <div class="flex flex-wrap items-center gap-3">
       <div class="flex items-center gap-3">
         <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard' })">
           <ArrowLeft class="h-5 w-5" />
         </Button>
         <h1 class="text-3xl font-bold tracking-tight">{{ platformName(props.tag) }}</h1>
       </div>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap justify-center gap-2 w-full sm:w-auto sm:ml-auto">
         <button
           class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
           :disabled="uploading"
@@ -222,7 +222,7 @@ onBeforeUnmount(() => {
     </p>
     <div
       v-else-if="viewMode === 'cards'"
-      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+      class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4"
     >
       <button
         v-for="game in filtered"
