@@ -8,7 +8,7 @@ import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
 import GameCover from '@/components/game/GameCover.vue'
 import GameTable from '@/components/game/GameTable.vue'
-import { ArrowLeft, Cpu, LayoutGrid, Layers, Plus, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Cpu, Gamepad2, LayoutGrid, Layers, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string }>()
 const router = useRouter()
@@ -145,9 +145,9 @@ onBeforeUnmount(() => {
           @click="fileInput?.click()"
         >
           <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <Plus class="h-4 w-4 text-accent" />
+            <Gamepad2 class="h-4 w-4 text-accent" />
           </div>
-          <div class="font-semibold text-sm text-foreground">Roms</div>
+          <div class="font-semibold text-sm text-foreground">ROMs</div>
         </button>
         <button
           class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
