@@ -175,7 +175,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl p-6 space-y-6">
+  <div class="mx-auto max-w-7xl p-6 space-y-6">
     <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
 
     <div class="flex flex-wrap items-center gap-3">
@@ -278,7 +278,7 @@ onBeforeUnmount(() => {
       <button
         v-for="game in paged"
         :key="game.id"
-        class="text-left transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40 rounded-lg"
+        class="text-left transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40"
         @click="openGame(game.id)"
       >
         <GameCover :tag="props.tag" :game="game" />

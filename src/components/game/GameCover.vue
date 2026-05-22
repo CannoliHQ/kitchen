@@ -29,22 +29,20 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="relative rounded-lg overflow-hidden"
-    style="aspect-ratio: 3 / 4"
-    :style="artSrc ? undefined : { background: bg }"
-  >
-    <img
-      v-if="artSrc"
-      :src="artSrc"
-      :alt="game.displayName"
-      class="h-full w-full object-cover"
-    />
-    <div v-else class="absolute inset-0 flex items-end p-3">
-      <span
-        class="text-base font-extrabold text-white leading-tight break-words"
-        style="text-shadow: 0 1px 4px rgba(0,0,0,0.45)"
-      >{{ game.displayName }}</span>
+  <div>
+    <div
+      style="aspect-ratio: 3 / 4"
+      :style="artSrc ? undefined : { background: bg }"
+    >
+      <img
+        v-if="artSrc"
+        :src="artSrc"
+        :alt="game.displayName"
+        class="h-full w-full object-cover"
+      />
+    </div>
+    <div class="px-2 py-1.5 text-center bg-card border-t border-white/5">
+      <span class="line-clamp-2 text-xs font-bold leading-tight text-foreground">{{ game.displayName }}</span>
     </div>
   </div>
 </template>
