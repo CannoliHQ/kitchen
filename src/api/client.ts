@@ -140,7 +140,7 @@ export interface GameRow {
   guidesCount: number
   raGameId: number | null
   lastPlayedAt: number | null
-  discPaths: string[] | null
+  multiDisc: boolean
 }
 
 export interface PlatformGames {
