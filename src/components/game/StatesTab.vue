@@ -4,6 +4,7 @@ import {
   listGameStates, deleteGameState, uploadGameState, downloadGameState, downloadGameStatesZip, gameStateThumbnailBlob,
   type SlotInfo,
 } from '@/api/client'
+import { confirm } from '@/lib/confirm'
 import Button from '@/components/ui/Button.vue'
 import { Download, Upload, Trash2, Archive, Check } from 'lucide-vue-next'
 
@@ -106,7 +107,7 @@ function pickFile(): Promise<File | null> {
 }
 
 async function onUpload(s: SlotInfo) {
-  if (s.exists && !confirm(`Replace ${s.label}?`)) return
+  if (s.exists && !await confirm({ title: `Replace ${s.label}?`, confirmLabel: 'Replace' })) return
   const file = await pickFile()
   if (!file) return
   busy.value = true
@@ -122,7 +123,7 @@ async function onUpload(s: SlotInfo) {
 }
 
 async function onDelete(s: SlotInfo) {
-  if (!confirm(`Delete ${s.label}?`)) return
+  if (!await confirm({ title: `Delete ${s.label}?`, confirmLabel: 'Delete', destructive: true })) return
   busy.value = true
   rowError.value.delete(s.slot)
   try {
@@ -137,7 +138,8 @@ async function onDelete(s: SlotInfo) {
 
 async function onDeleteSelected() {
   const count = selected.value.size
-  if (!count || !confirm(`Delete ${count} save state${count === 1 ? '' : 's'}?`)) return
+  if (!count) return
+  if (!await confirm({ title: `Delete ${count} save state${count === 1 ? '' : 's'}?`, confirmLabel: 'Delete', destructive: true })) return
   busy.value = true
   error.value = null
   try {
@@ -190,7 +192,7 @@ onBeforeUnmount(clearThumbs)
       <Button variant="outline" size="sm" @click="load">Retry</Button>
     </div>
 
-    <div v-else class="grid grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-4">
       <div
         v-for="s in slots"
         :key="s.slot"

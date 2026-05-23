@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, getGames, moveGame, renameGame, type GameDetail } from '@/api/client'
 import { platformName } from '@/api/platforms'
 import { coverColor, coverColorDark } from '@/lib/coverColor'
+import { confirm } from '@/lib/confirm'
 import Button from '@/components/ui/Button.vue'
 import Modal from '@/components/ui/Modal.vue'
 import Dropdown from '@/components/ui/Dropdown.vue'
@@ -24,6 +25,12 @@ const romId = computed(() => Number(props.id))
 const router = useRouter()
 
 const game = ref<GameDetail | null>(null)
+
+function backRoute() {
+  const folder = game.value?.folder
+  if (folder) return { name: 'platform-folder', params: { tag: props.tag, folder } }
+  return { name: 'platform', params: { tag: props.tag } }
+}
 const loading = ref(true)
 const error = ref<string | null>(null)
 const artSrc = ref<string | null>(null)
@@ -125,7 +132,7 @@ async function onUploadArt() {
 }
 
 async function onDeleteArt() {
-  if (!confirm('Delete box art?')) return
+  if (!await confirm({ title: 'Delete box art?', confirmLabel: 'Delete', destructive: true })) return
   artBusy.value = true
   try {
     await deleteGameArt(props.tag, romId.value)
@@ -141,7 +148,7 @@ async function confirmDelete() {
   deleting.value = true
   try {
     await deleteGame(props.tag, romId.value, purge.value)
-    router.push({ name: 'platform', params: { tag: props.tag } })
+    router.push(backRoute())
   } catch {
     error.value = 'Failed to delete game'
     deleting.value = false
@@ -205,7 +212,7 @@ onBeforeUnmount(() => {
       <div class="flex items-center justify-between mb-4">
         <button
           class="flex items-center gap-1.5 -ml-1 text-foreground/70 hover:text-foreground transition-colors"
-          @click="router.push({ name: 'platform', params: { tag: props.tag } })"
+          @click="router.push(backRoute())"
         >
           <ArrowLeft class="h-5 w-5" />
           <span class="text-base font-medium">{{ platformName(props.tag) }}</span>
@@ -279,7 +286,7 @@ onBeforeUnmount(() => {
         </select>
       </div>
 
-      <div class="hidden sm:flex items-center gap-1 border-b border-border overflow-x-auto mt-6">
+      <div class="hidden sm:flex items-center gap-1 border-b border-border mt-6">
         <button
           v-for="t in tabs"
           :key="t.key"

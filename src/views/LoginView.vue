@@ -186,12 +186,12 @@ async function connect(silent = false) {
     loading.value = false
     checking.value = false
     nextTick(() => digitRefs.value[0]?.focus())
-    if (!silent && err instanceof Error) {
-      if (err.message === 'Unauthorized') {
+    if (err instanceof Error) {
+      if (err.message === 'ConnectionError') {
+        connectionError.value = true
+      } else if (!silent && err.message === 'Unauthorized') {
         pinError.value = true
         setTimeout(() => { pinError.value = false }, 600)
-      } else if (err.message === 'ConnectionError') {
-        connectionError.value = true
       }
     }
   }
@@ -201,6 +201,7 @@ async function tryPinlessConnect(): Promise<boolean> {
   if (!octets.value.every(o => o)) return false
   try {
     const status = await getAuthStatus(host.value)
+    connectionError.value = false
     if (status.required) {
       pinRequired.value = true
       return false
@@ -210,6 +211,7 @@ async function tryPinlessConnect(): Promise<boolean> {
     proceed()
     return true
   } catch {
+    connectionError.value = true
     return false
   }
 }
@@ -267,9 +269,9 @@ function onDigitPaste(event: ClipboardEvent) {
         <img src="/logo.png" alt="Cannoli" class="mx-auto h-16 w-auto" />
         <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
         <template v-if="!checking">
-          <p v-if="showHost" class="text-lg font-semibold text-foreground">Enter your device IP.</p>
-          <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
           <p v-if="connectionError" class="text-sm font-medium text-destructive">Cannot connect to server.<br>Ensure Nonna's Kitchen is running.</p>
+          <p v-else-if="showHost" class="text-lg font-semibold text-foreground">Enter your device IP.</p>
+          <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
         </template>
       </div>
 
@@ -296,7 +298,7 @@ function onDigitPaste(event: ClipboardEvent) {
         </div>
 
         <!-- PIN -->
-        <div v-if="pinRequired" class="space-y-2">
+        <div v-if="pinRequired && !connectionError" class="space-y-2">
           <div class="flex justify-center gap-2" :class="{ 'animate-shake': pinError }" @paste="onDigitPaste">
             <input
               v-for="(_, i) in 6"

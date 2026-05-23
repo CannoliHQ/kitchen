@@ -2,22 +2,22 @@
 
 @theme {
   /* Cannoli OS palette */
-  --color-background: #1a1a2e;
-  --color-foreground: #f5e6ca;
-  --color-card: #222240;
-  --color-card-foreground: #f5e6ca;
+  --color-background: #1c1a17;
+  --color-foreground: #faf0dc;
+  --color-card: #26221d;
+  --color-card-foreground: #faf0dc;
   --color-primary: #4a9ab5;
   --color-primary-light: #80c1dd;
   --color-primary-dark: #357a94;
-  --color-primary-foreground: #1a1a2e;
-  --color-muted: #2a2a48;
-  --color-muted-foreground: #9a8e7a;
-  --color-border: #2e2e50;
-  --color-input: #2e2e50;
+  --color-primary-foreground: #1c1a17;
+  --color-muted: #2d2822;
+  --color-muted-foreground: #b8a98f;
+  --color-border: #332e26;
+  --color-input: #332e26;
   --color-ring: #4a9ab5;
   --color-destructive: #c45050;
   --color-accent: #d9a06a;
-  --color-accent-foreground: #1a1a2e;
+  --color-accent-foreground: #1c1a17;
   --color-cream: #f5e6ca;
   --color-cream-light: #faf0dc;
   --color-tan: #d9a06a;
@@ -30,5 +30,10 @@
 body {
   @apply bg-background text-foreground antialiased;
   font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 

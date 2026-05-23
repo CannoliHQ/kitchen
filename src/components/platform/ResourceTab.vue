@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { listFiles, deleteFile, uploadFiles, resourceFileBlob, type FileEntry } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { Check, File as FileIcon, LayoutGrid, Table as TableIcon, Trash2 } from 'lucide-vue-next'
+import { Check, File as FileIcon, LayoutGrid, Table as TableIcon, Trash2, Upload } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; resource: 'overlays' | 'bios'; display?: 'list' | 'images' }>()
 
@@ -131,9 +131,44 @@ function triggerUpload() {
 
 defineExpose({ triggerUpload })
 
+const dragOver = ref(false)
+let dragDepth = 0
+function onWindowDragEnter(e: DragEvent) {
+  if (!e.dataTransfer?.types.includes('Files')) return
+  e.preventDefault()
+  dragDepth++
+  dragOver.value = true
+}
+function onWindowDragOver(e: DragEvent) {
+  e.preventDefault()
+}
+function onWindowDragLeave(e: DragEvent) {
+  e.preventDefault()
+  dragDepth = Math.max(0, dragDepth - 1)
+  if (dragDepth === 0) dragOver.value = false
+}
+function onWindowDrop(e: DragEvent) {
+  e.preventDefault()
+  dragDepth = 0
+  dragOver.value = false
+  doUpload(Array.from(e.dataTransfer?.files ?? []))
+}
+
 watch(() => [props.tag, props.resource], load)
-onMounted(load)
-onBeforeUnmount(clearThumbnails)
+onMounted(() => {
+  load()
+  window.addEventListener('dragenter', onWindowDragEnter)
+  window.addEventListener('dragover', onWindowDragOver)
+  window.addEventListener('dragleave', onWindowDragLeave)
+  window.addEventListener('drop', onWindowDrop)
+})
+onBeforeUnmount(() => {
+  clearThumbnails()
+  window.removeEventListener('dragenter', onWindowDragEnter)
+  window.removeEventListener('dragover', onWindowDragOver)
+  window.removeEventListener('dragleave', onWindowDragLeave)
+  window.removeEventListener('drop', onWindowDrop)
+})
 </script>
 
 <template>
@@ -150,7 +185,7 @@ onBeforeUnmount(clearThumbnails)
       <Progress :value="uploadProgress" class="!h-2.5" />
     </div>
 
-    <div class="flex items-center justify-end gap-2">
+    <div v-if="resource !== 'bios'" class="flex items-center justify-end gap-2">
       <div class="flex rounded-lg border border-border overflow-hidden">
         <button
           class="p-2 transition-colors"
@@ -202,7 +237,7 @@ onBeforeUnmount(clearThumbnails)
 
     <div
       v-else-if="viewMode === 'images'"
-      class="grid grid-cols-3 gap-4"
+      class="grid grid-cols-2 sm:grid-cols-3 gap-4"
     >
       <div
         v-for="entry in entries"
@@ -267,6 +302,14 @@ onBeforeUnmount(clearThumbnails)
           <Trash2 class="h-3.5 w-3.5" />
         </button>
       </div>
+    </div>
+
+    <div
+      v-if="dragOver"
+      class="fixed inset-0 z-50 border-4 border-dashed border-accent bg-background/90 flex flex-col items-center justify-center gap-3 pointer-events-none"
+    >
+      <Upload class="h-12 w-12 text-accent" />
+      <p class="text-xl font-semibold text-foreground">Drop files to upload</p>
     </div>
   </div>
 </template>

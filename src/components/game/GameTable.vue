@@ -12,13 +12,44 @@ defineProps<{
   selectedGameIds?: Set<number>
   selectedFolderPaths?: Set<string>
 }>()
-defineEmits<{
+const emit = defineEmits<{
   open: [id: number]
   sort: [key: string]
   'open-folder': [path: string]
   'toggle-game': [id: number]
   'toggle-folder': [path: string]
+  'long-press-game': [id: number]
+  'long-press-folder': [path: string]
 }>()
+
+const LONG_PRESS_MS = 450
+let pressTimer: number | null = null
+let pressFired = false
+
+function cancelPress() {
+  if (pressTimer !== null) {
+    clearTimeout(pressTimer)
+    pressTimer = null
+  }
+}
+function startPressGame(id: number) {
+  cancelPress()
+  pressTimer = window.setTimeout(() => {
+    pressFired = true
+    emit('long-press-game', id)
+  }, LONG_PRESS_MS)
+}
+function startPressFolder(path: string) {
+  cancelPress()
+  pressTimer = window.setTimeout(() => {
+    pressFired = true
+    emit('long-press-folder', path)
+  }, LONG_PRESS_MS)
+}
+function consumeFired(): boolean {
+  if (pressFired) { pressFired = false; return true }
+  return false
+}
 
 function formatPlayed(ms: number | null | undefined) {
   if (!ms) return 'Never'
@@ -61,9 +92,14 @@ const columns: { key: string; label: string; align: string }[] = [
         <tr
           v-for="folder in folders"
           :key="'folder:' + folder"
-          class="cursor-pointer"
+          class="cursor-pointer select-none"
           :class="selectMode && selectedFolderPaths?.has(folder) ? 'bg-accent/15' : 'hover:bg-muted/50'"
-          @click="selectMode ? $emit('toggle-folder', folder) : $emit('open-folder', folder)"
+          @click="consumeFired() ? null : (selectMode ? emit('toggle-folder', folder) : emit('open-folder', folder))"
+          @pointerdown="startPressFolder(folder)"
+          @pointerup="cancelPress"
+          @pointerleave="cancelPress"
+          @pointercancel="cancelPress"
+          @contextmenu.prevent
         >
           <td v-if="selectMode" class="px-3 py-2.5 text-center">
             <span class="inline-flex h-4 w-4 items-center justify-center rounded border border-border" :class="selectedFolderPaths?.has(folder) ? 'bg-accent border-accent' : ''">
@@ -84,9 +120,14 @@ const columns: { key: string; label: string; align: string }[] = [
         <tr
           v-for="(g, idx) in games"
           :key="g.id"
-          class="cursor-pointer"
+          class="cursor-pointer select-none"
           :class="selectMode && selectedGameIds?.has(g.id) ? 'bg-accent/15' : [idx % 2 === 1 ? 'bg-muted/20' : '', 'hover:bg-muted/50']"
-          @click="selectMode ? $emit('toggle-game', g.id) : $emit('open', g.id)"
+          @click="consumeFired() ? null : (selectMode ? emit('toggle-game', g.id) : emit('open', g.id))"
+          @pointerdown="startPressGame(g.id)"
+          @pointerup="cancelPress"
+          @pointerleave="cancelPress"
+          @pointercancel="cancelPress"
+          @contextmenu.prevent
         >
           <td v-if="selectMode" class="px-3 py-2.5 text-center">
             <span class="inline-flex h-4 w-4 items-center justify-center rounded border border-border" :class="selectedGameIds?.has(g.id) ? 'bg-accent border-accent' : ''">

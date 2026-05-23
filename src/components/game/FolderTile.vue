@@ -5,15 +5,10 @@ defineProps<{ name: string }>()
 </script>
 
 <template>
-  <div>
-    <div
-      style="aspect-ratio: 3 / 4"
-      class="flex items-center justify-center border-2 border-dashed border-amber-500/50 bg-amber-950/30"
-    >
-      <Folder class="h-10 w-10 text-amber-500/70" />
-    </div>
-    <div class="flex h-[2.625rem] items-center justify-center px-2 text-center bg-card border-t border-white/5">
-      <span class="line-clamp-2 text-xs font-bold leading-tight text-foreground">{{ name }}</span>
-    </div>
+  <div
+    class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-border bg-card"
+  >
+    <Folder class="h-5 w-5 text-amber-500 shrink-0" />
+    <span class="truncate text-sm font-semibold text-foreground" :title="name">{{ name }}</span>
   </div>
 </template>

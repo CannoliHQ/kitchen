@@ -133,7 +133,7 @@ const actionItems = computed<DropdownItem[]>(() => {
       </select>
     </div>
 
-    <div class="hidden sm:flex items-center gap-1 border-b border-border overflow-x-auto">
+    <div class="hidden sm:flex items-center gap-1 border-b border-border">
       <button
         v-for="t in tabs"
         :key="t.key"
@@ -145,25 +145,27 @@ const actionItems = computed<DropdownItem[]>(() => {
       </button>
     </div>
 
-    <GamesTab
-      v-if="activeTab === 'games'"
-      ref="gamesTabRef"
-      :tag="props.tag"
-      :folder="props.folder ?? ''"
-    />
-    <ResourceTab
-      v-else-if="activeTab === 'overlays'"
-      ref="overlaysTabRef"
-      :tag="props.tag"
-      resource="overlays"
-      display="images"
-    />
-    <ResourceTab
-      v-else
-      ref="biosTabRef"
-      :tag="props.tag"
-      resource="bios"
-      display="list"
-    />
+    <div>
+      <GamesTab
+        v-if="activeTab === 'games'"
+        ref="gamesTabRef"
+        :tag="props.tag"
+        :folder="props.folder ?? ''"
+      />
+      <ResourceTab
+        v-else-if="activeTab === 'overlays'"
+        ref="overlaysTabRef"
+        :tag="props.tag"
+        resource="overlays"
+        display="images"
+      />
+      <ResourceTab
+        v-else
+        ref="biosTabRef"
+        :tag="props.tag"
+        resource="bios"
+        display="list"
+      />
+    </div>
   </div>
 </template>

@@ -234,7 +234,7 @@ function goBack() {
   if (subpath.value.length > 0) {
     navigateTo(subpath.value.slice(0, -1))
   } else {
-    router.push(props.tag ? { name: 'platform', params: { tag: props.tag } } : { name: 'dashboard' })
+    router.push(props.tag ? { name: 'platform', params: { tag: props.tag } } : { name: 'dashboard', params: { tab: 'customization' } })
   }
 }
 

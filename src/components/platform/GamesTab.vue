@@ -13,7 +13,7 @@ import Modal from '@/components/ui/Modal.vue'
 import NewFolderDialog from '@/components/file/NewFolderDialog.vue'
 import MoveDialog from '@/components/file/MoveDialog.vue'
 import RenameDialog from '@/components/file/RenameDialog.vue'
-import { Check, CheckSquare, ChevronRight, LayoutGrid, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
+import { Check, CheckSquare, ChevronRight, Folder, LayoutGrid, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
 import { folderLeaf } from '@/lib/folders'
 
 const props = defineProps<{ tag: string; folder: string }>()
@@ -185,6 +185,49 @@ function toggleGame(id: number) {
 function toggleFolder(path: string) {
   if (selectedFolderPaths.has(path)) selectedFolderPaths.delete(path)
   else selectedFolderPaths.add(path)
+}
+
+const LONG_PRESS_MS = 450
+let pressTimer: number | null = null
+const pressFired = ref(false)
+
+function cancelPress() {
+  if (pressTimer !== null) {
+    clearTimeout(pressTimer)
+    pressTimer = null
+  }
+}
+
+function startPressGame(id: number) {
+  cancelPress()
+  pressTimer = window.setTimeout(() => {
+    pressFired.value = true
+    if (!selectMode.value) selectMode.value = true
+    toggleGame(id)
+  }, LONG_PRESS_MS)
+}
+
+function startPressFolder(path: string) {
+  cancelPress()
+  pressTimer = window.setTimeout(() => {
+    pressFired.value = true
+    if (!selectMode.value) selectMode.value = true
+    toggleFolder(path)
+  }, LONG_PRESS_MS)
+}
+
+function handleGameClick(id: number) {
+  cancelPress()
+  if (pressFired.value) { pressFired.value = false; return }
+  if (selectMode.value) toggleGame(id)
+  else openGame(id)
+}
+
+function handleFolderClick(path: string) {
+  cancelPress()
+  if (pressFired.value) { pressFired.value = false; return }
+  if (selectMode.value) toggleFolder(path)
+  else openFolder(path)
 }
 
 const movePromptOpen = ref(false)
@@ -380,20 +423,24 @@ onBeforeUnmount(() => {
       <Progress :value="uploadProgress" class="!h-2.5" />
     </div>
 
-    <nav v-if="currentFolder" class="flex items-center gap-1 text-sm text-foreground/60 flex-wrap">
+    <nav
+      v-if="currentFolder"
+      class="flex items-center gap-1.5 flex-wrap rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm"
+    >
+      <Folder class="h-4 w-4 text-amber-500 shrink-0" />
       <button
-        class="hover:text-foreground transition-colors"
+        class="text-foreground/60 hover:text-foreground transition-colors"
         @click="router.push({ name: 'platform', params: { tag: props.tag } })"
       >{{ platformName(props.tag) }}</button>
       <template v-for="(seg, i) in breadcrumbSegments" :key="seg.path">
-        <ChevronRight class="h-3.5 w-3.5 shrink-0" />
+        <ChevronRight class="h-3.5 w-3.5 shrink-0 text-foreground/40" />
         <span
           v-if="i === breadcrumbSegments.length - 1"
-          class="text-foreground font-medium"
+          class="text-foreground font-semibold"
         >{{ seg.label }}</span>
         <button
           v-else
-          class="hover:text-foreground transition-colors"
+          class="text-foreground/60 hover:text-foreground transition-colors"
           @click="router.push({ name: 'platform-folder', params: { tag: props.tag, folder: seg.path } })"
         >{{ seg.label }}</button>
       </template>
@@ -472,45 +519,67 @@ onBeforeUnmount(() => {
     <p v-else-if="!filtered.length && !currentFolders.length" class="text-base text-foreground/75 py-8 text-center">
       {{ search ? `No games match "${search}".` : 'No games yet.' }}
     </p>
-    <div
-      v-else-if="viewMode === 'cards'"
-      ref="gridRef"
-      class="grid gap-3 sm:gap-4"
-      style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));"
-    >
-      <button
-        v-for="folderPath in currentFolders"
-        :key="'folder:' + folderPath"
-        class="relative text-left transition-transform"
-        :class="!selectMode ? 'hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40' : selectedFolderPaths.has(folderPath) ? 'ring-2 ring-accent rounded-sm' : ''"
-        @click="selectMode ? toggleFolder(folderPath) : openFolder(folderPath)"
-      >
-        <span
-          v-if="selectMode"
-          class="absolute top-1.5 left-1.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded border-2 border-white/60 bg-black/60"
-          :class="selectedFolderPaths.has(folderPath) ? 'bg-accent border-accent' : ''"
+    <template v-else-if="viewMode === 'cards'">
+      <section v-if="currentFolders.length">
+        <h2 class="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-3">Folders</h2>
+        <div
+          class="grid gap-2 sm:gap-3"
+          style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));"
         >
-          <Check v-if="selectedFolderPaths.has(folderPath)" class="h-3 w-3 text-white" />
-        </span>
-        <FolderTile :name="folderLeaf(folderPath)" />
-      </button>
-      <button
-        v-for="game in paged"
-        :key="game.id"
-        class="relative text-left transition-transform"
-        :class="!selectMode ? 'hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40' : selectedGameIds.has(game.id) ? 'ring-2 ring-accent rounded-sm' : ''"
-        @click="selectMode ? toggleGame(game.id) : openGame(game.id)"
-      >
-        <span
-          v-if="selectMode"
-          class="absolute top-1.5 left-1.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded border-2 border-white/60 bg-black/60"
-          :class="selectedGameIds.has(game.id) ? 'bg-accent border-accent' : ''"
+          <button
+            v-for="folderPath in currentFolders"
+            :key="'folder:' + folderPath"
+            class="relative text-left transition-transform select-none"
+            :class="!selectMode ? 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40' : selectedFolderPaths.has(folderPath) ? 'ring-2 ring-accent rounded-lg' : ''"
+            @click="handleFolderClick(folderPath)"
+            @pointerdown="startPressFolder(folderPath)"
+            @pointerup="cancelPress"
+            @pointerleave="cancelPress"
+            @pointercancel="cancelPress"
+            @contextmenu.prevent
+          >
+            <span
+              v-if="selectMode"
+              class="absolute top-1.5 left-1.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded border-2 border-white/60 bg-black/60"
+              :class="selectedFolderPaths.has(folderPath) ? 'bg-accent border-accent' : ''"
+            >
+              <Check v-if="selectedFolderPaths.has(folderPath)" class="h-3 w-3 text-white" />
+            </span>
+            <FolderTile :name="folderLeaf(folderPath)" />
+          </button>
+        </div>
+      </section>
+      <section v-if="paged.length">
+        <h2 class="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-3">Games</h2>
+        <div
+          ref="gridRef"
+          class="grid gap-3 sm:gap-4"
+          style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));"
         >
-          <Check v-if="selectedGameIds.has(game.id)" class="h-3 w-3 text-white" />
-        </span>
-        <GameCover :tag="props.tag" :game="game" />
-      </button>
-    </div>
+          <button
+            v-for="game in paged"
+            :key="game.id"
+            class="relative text-left transition-transform select-none"
+            :class="!selectMode ? 'hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40' : selectedGameIds.has(game.id) ? 'ring-2 ring-accent rounded-sm' : ''"
+            @click="handleGameClick(game.id)"
+            @pointerdown="startPressGame(game.id)"
+            @pointerup="cancelPress"
+            @pointerleave="cancelPress"
+            @pointercancel="cancelPress"
+            @contextmenu.prevent
+          >
+            <span
+              v-if="selectMode"
+              class="absolute top-1.5 left-1.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded border-2 border-white/60 bg-black/60"
+              :class="selectedGameIds.has(game.id) ? 'bg-accent border-accent' : ''"
+            >
+              <Check v-if="selectedGameIds.has(game.id)" class="h-3 w-3 text-white" />
+            </span>
+            <GameCover :tag="props.tag" :game="game" />
+          </button>
+        </div>
+      </section>
+    </template>
     <GameTable
       v-else
       :games="paged"
@@ -525,6 +594,8 @@ onBeforeUnmount(() => {
       @open-folder="openFolder"
       @toggle-game="toggleGame"
       @toggle-folder="toggleFolder"
+      @long-press-game="id => { if (!selectMode) selectMode = true; toggleGame(id) }"
+      @long-press-folder="path => { if (!selectMode) selectMode = true; toggleFolder(path) }"
     />
 
     <div v-if="!loading && !error && pageCount > 1" class="flex items-center justify-center gap-3 pt-1">

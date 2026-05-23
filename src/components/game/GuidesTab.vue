@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { listGameGuides, downloadGameGuide, uploadGameGuide, deleteGameGuide, type GameFile } from '@/api/client'
+import { confirm } from '@/lib/confirm'
 import Button from '@/components/ui/Button.vue'
 import { BookOpen, Upload, Download, Trash2 } from 'lucide-vue-next'
 
@@ -74,7 +75,7 @@ async function onDownload(f: GameFile) {
 }
 
 async function onDelete(f: GameFile) {
-  if (!confirm(`Delete ${f.name}?`)) return
+  if (!await confirm({ title: `Delete ${f.name}?`, confirmLabel: 'Delete', destructive: true })) return
   busy.value = true
   error.value = null
   try {
