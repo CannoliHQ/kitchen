@@ -2,22 +2,22 @@
 
 @theme {
   /* Cannoli OS palette */
-  --color-background: #1c1a17;
+  --color-background: #161618;
   --color-foreground: #faf0dc;
-  --color-card: #26221d;
+  --color-card: #24211c;
   --color-card-foreground: #faf0dc;
   --color-primary: #4a9ab5;
   --color-primary-light: #80c1dd;
   --color-primary-dark: #357a94;
-  --color-primary-foreground: #1c1a17;
-  --color-muted: #2d2822;
+  --color-primary-foreground: #161618;
+  --color-muted: #2a2620;
   --color-muted-foreground: #b8a98f;
-  --color-border: #332e26;
-  --color-input: #332e26;
+  --color-border: #322d24;
+  --color-input: #322d24;
   --color-ring: #4a9ab5;
   --color-destructive: #c45050;
   --color-accent: #d9a06a;
-  --color-accent-foreground: #1c1a17;
+  --color-accent-foreground: #161618;
   --color-cream: #f5e6ca;
   --color-cream-light: #faf0dc;
   --color-tan: #d9a06a;
