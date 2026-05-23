@@ -444,7 +444,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl p-6 space-y-6">
+  <div class="mx-auto max-w-7xl p-6 space-y-6">
     <!-- Header -->
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="goBack">

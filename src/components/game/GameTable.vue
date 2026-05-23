@@ -1,14 +1,26 @@
 <script setup lang="ts">
+import { Check, Folder } from 'lucide-vue-next'
 import type { GameRow } from '@/api/client'
+import { folderLeaf } from '@/lib/folders'
 
 defineProps<{
   games: GameRow[]
   sortKey: string
   sortDir: 1 | -1
+  folders?: string[]
+  selectMode?: boolean
+  selectedGameIds?: Set<number>
+  selectedFolderPaths?: Set<string>
 }>()
-defineEmits<{ open: [id: number]; sort: [key: string] }>()
+defineEmits<{
+  open: [id: number]
+  sort: [key: string]
+  'open-folder': [path: string]
+  'toggle-game': [id: number]
+  'toggle-folder': [path: string]
+}>()
 
-function formatPlayed(ms: number | null) {
+function formatPlayed(ms: number | null | undefined) {
   if (!ms) return 'Never'
   const diff = Date.now() - ms
   const day = 86400000
@@ -33,6 +45,7 @@ const columns: { key: string; label: string; align: string }[] = [
     <table class="w-full border-collapse text-sm">
       <thead>
         <tr>
+          <th v-if="selectMode" class="w-10 px-3 py-2.5 border-b border-border" />
           <th
             v-for="col in columns"
             :key="col.key"
@@ -46,16 +59,44 @@ const columns: { key: string; label: string; align: string }[] = [
       </thead>
       <tbody>
         <tr
+          v-for="folder in folders"
+          :key="'folder:' + folder"
+          class="cursor-pointer"
+          :class="selectMode && selectedFolderPaths?.has(folder) ? 'bg-accent/15' : 'hover:bg-muted/50'"
+          @click="selectMode ? $emit('toggle-folder', folder) : $emit('open-folder', folder)"
+        >
+          <td v-if="selectMode" class="px-3 py-2.5 text-center">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded border border-border" :class="selectedFolderPaths?.has(folder) ? 'bg-accent border-accent' : ''">
+              <Check v-if="selectedFolderPaths?.has(folder)" class="h-3 w-3 text-accent-foreground" />
+            </span>
+          </td>
+          <td class="px-3 py-2.5 font-semibold text-foreground">
+            <span class="inline-flex items-center gap-2">
+              <Folder class="h-4 w-4 text-amber-500/70 shrink-0" />
+              {{ folderLeaf(folder) }}
+            </span>
+          </td>
+          <td class="px-3 py-2.5 text-center text-foreground/30">-</td>
+          <td class="px-3 py-2.5 text-center text-foreground/30">-</td>
+          <td class="px-3 py-2.5 text-center text-foreground/30">-</td>
+          <td class="px-3 py-2.5 text-right text-foreground/30">-</td>
+        </tr>
+        <tr
           v-for="(g, idx) in games"
           :key="g.id"
-          class="cursor-pointer hover:bg-muted/50"
-          :class="idx % 2 === 1 ? 'bg-muted/20' : ''"
-          @click="$emit('open', g.id)"
+          class="cursor-pointer"
+          :class="selectMode && selectedGameIds?.has(g.id) ? 'bg-accent/15' : [idx % 2 === 1 ? 'bg-muted/20' : '', 'hover:bg-muted/50']"
+          @click="selectMode ? $emit('toggle-game', g.id) : $emit('open', g.id)"
         >
+          <td v-if="selectMode" class="px-3 py-2.5 text-center">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded border border-border" :class="selectedGameIds?.has(g.id) ? 'bg-accent border-accent' : ''">
+              <Check v-if="selectedGameIds?.has(g.id)" class="h-3 w-3 text-accent-foreground" />
+            </span>
+          </td>
           <td class="px-3 py-2.5 font-semibold text-foreground">{{ g.displayName }}</td>
-          <td class="px-3 py-2.5 text-center" :class="g.savesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.savesCount || '—' }}</td>
-          <td class="px-3 py-2.5 text-center" :class="g.statesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.statesCount || '—' }}</td>
-          <td class="px-3 py-2.5 text-center" :class="g.guidesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.guidesCount || '—' }}</td>
+          <td class="px-3 py-2.5 text-center" :class="g.savesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.savesCount || '-' }}</td>
+          <td class="px-3 py-2.5 text-center" :class="g.statesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.statesCount || '-' }}</td>
+          <td class="px-3 py-2.5 text-center" :class="g.guidesCount ? 'text-foreground/80' : 'text-foreground/30'">{{ g.guidesCount || '-' }}</td>
           <td class="px-3 py-2.5 text-right text-foreground/60">{{ formatPlayed(g.lastPlayedAt) }}</td>
         </tr>
       </tbody>

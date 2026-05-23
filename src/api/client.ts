@@ -131,6 +131,7 @@ export interface GameRow {
   displayName: string
   sortKey: string
   path: string
+  folder: string
   size: number
   modified: number
   hasArt: boolean
@@ -138,14 +139,15 @@ export interface GameRow {
   savesCount: number
   statesCount: number
   guidesCount: number
-  raGameId: number | null
-  lastPlayedAt: number | null
+  raGameId?: number
+  lastPlayedAt?: number
   multiDisc: boolean
 }
 
 export interface PlatformGames {
   platform: string
   displayName: string
+  folders: string[]
   games: GameRow[]
 }
 
@@ -215,6 +217,16 @@ export async function downloadGameRomFile(tag: string, id: number, path: string,
 export async function deleteGame(tag: string, id: number, purge: boolean): Promise<void> {
   const res = await request(`${gameBase(tag, id)}${purge ? '?purge=true' : ''}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`deleteGame ${res.status}`)
+}
+
+export async function moveGame(tag: string, id: number, folder: string): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/move?folder=${encodeURIComponent(folder)}`, { method: 'POST' })
+  if (!res.ok) throw new Error(`moveGame ${res.status}`)
+}
+
+export async function renameGame(tag: string, id: number, name: string): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/rename?name=${encodeURIComponent(name)}`, { method: 'POST' })
+  if (!res.ok) throw new Error(`renameGame ${res.status}`)
 }
 
 export async function rescanPlatform(tag: string): Promise<void> {

@@ -41,7 +41,7 @@ onBeforeUnmount(() => {
         class="h-full w-full object-cover"
       />
     </div>
-    <div class="px-2 py-1.5 text-center bg-card border-t border-white/5">
+    <div class="flex h-[2.625rem] items-center justify-center px-2 text-center bg-card border-t border-white/5">
       <span class="line-clamp-2 text-xs font-bold leading-tight text-foreground">{{ game.displayName }}</span>
     </div>
   </div>

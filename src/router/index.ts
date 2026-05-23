@@ -12,6 +12,12 @@ const router = createRouter({
     { path: '/dashboard/:tab?', name: 'dashboard', component: DashboardView, props: true },
     { path: '/platform/:tag', name: 'platform', component: PlatformView, props: true },
     {
+      path: '/platform/:tag/folder/:folder(.*)',
+      name: 'platform-folder',
+      component: PlatformView,
+      props: true,
+    },
+    {
       path: '/platform/:tag/game/:id/:tab?',
       name: 'game',
       component: () => import('@/views/GameDetailView.vue'),

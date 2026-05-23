@@ -60,7 +60,7 @@ function disconnect() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl p-6 pb-0 space-y-8 min-h-screen flex flex-col">
+  <div class="mx-auto max-w-7xl p-6 pb-0 space-y-8 min-h-screen flex flex-col">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -93,9 +93,12 @@ function disconnect() {
 
     <!-- Content tab -->
     <template v-if="activeTab === 'content'">
-      <div class="space-y-4 flex-1">
+      <div class="space-y-6 flex-1">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-muted-foreground">Platforms</h2>
+          <div class="relative w-60">
+            <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input v-model="search" placeholder="Search platforms..." class="!pl-9 !h-9 !rounded-lg" />
+          </div>
           <div class="flex items-center gap-2">
             <button
               class="p-2 rounded-lg transition-colors"
@@ -113,10 +116,6 @@ function disconnect() {
             >
               <ArrowDownAZ class="h-4 w-4" />
             </button>
-            <div class="relative w-60">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input v-model="search" placeholder="Search platforms..." class="!pl-9 !h-9 !rounded-lg" />
-            </div>
           </div>
         </div>
 

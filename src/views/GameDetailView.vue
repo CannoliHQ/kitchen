@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, type GameDetail } from '@/api/client'
+import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, getGames, moveGame, renameGame, type GameDetail } from '@/api/client'
 import { platformName } from '@/api/platforms'
 import { coverColor, coverColorDark } from '@/lib/coverColor'
 import Button from '@/components/ui/Button.vue'
-import { ArrowLeft, ImagePlus, Upload, Trash2 } from 'lucide-vue-next'
+import Modal from '@/components/ui/Modal.vue'
+import Dropdown from '@/components/ui/Dropdown.vue'
+import type { DropdownItem } from '@/components/ui/Dropdown.vue'
+import MoveDialog from '@/components/file/MoveDialog.vue'
+import RenameDialog from '@/components/file/RenameDialog.vue'
+import { ArrowLeft, ImagePlus, Upload, Trash2, FolderInput, Pencil } from 'lucide-vue-next'
 import RomTab from '@/components/game/RomTab.vue'
 import SavesTab from '@/components/game/SavesTab.vue'
 import StatesTab from '@/components/game/StatesTab.vue'
@@ -26,6 +31,9 @@ const artBusy = ref(false)
 const showDelete = ref(false)
 const purge = ref(false)
 const deleting = ref(false)
+const showMove = ref(false)
+const platformFolders = ref<string[]>([])
+const showRename = ref(false)
 
 const activeTab = computed<TabKey>(() =>
   TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'rom',
@@ -141,6 +149,45 @@ async function confirmDelete() {
   }
 }
 
+async function openMove() {
+  try {
+    const res = await getGames(props.tag)
+    platformFolders.value = res.folders
+  } catch {
+    error.value = 'Failed to load folders'
+    return
+  }
+  showMove.value = true
+}
+
+const actionItems: DropdownItem[] = [
+  { label: 'Move', icon: FolderInput, onSelect: openMove },
+  { label: 'Rename', icon: Pencil, onSelect: () => { showRename.value = true } },
+  { label: 'Delete', icon: Trash2, danger: true, onSelect: () => { purge.value = false; showDelete.value = true } },
+]
+
+async function onMoveGame(target: string) {
+  try {
+    await moveGame(props.tag, romId.value, target)
+    await loadGame()
+  } catch {
+    error.value = 'Failed to move game'
+  } finally {
+    showMove.value = false
+  }
+}
+
+async function onRenameGame(newName: string) {
+  try {
+    await renameGame(props.tag, romId.value, newName)
+    await loadGame()
+  } catch {
+    error.value = 'Failed to rename game'
+  } finally {
+    showRename.value = false
+  }
+}
+
 onMounted(loadGame)
 onBeforeUnmount(() => {
   if (artSrc.value) URL.revokeObjectURL(artSrc.value)
@@ -148,7 +195,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl p-6">
+  <div class="mx-auto max-w-7xl p-6">
     <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
     <div v-else-if="error" class="text-base py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
@@ -163,12 +210,7 @@ onBeforeUnmount(() => {
           <ArrowLeft class="h-5 w-5" />
           <span class="text-base font-medium">{{ platformName(props.tag) }}</span>
         </button>
-        <button
-          class="flex items-center gap-1.5 text-sm font-medium text-foreground/60 hover:text-destructive transition-colors"
-          @click="showDelete = true"
-        >
-          <Trash2 class="h-4 w-4" /> Delete game
-        </button>
+        <Dropdown :items="actionItems" />
       </div>
 
       <div class="relative rounded-xl overflow-hidden" :style="artSrc ? undefined : heroStyle">
@@ -258,30 +300,38 @@ onBeforeUnmount(() => {
         </keep-alive>
       </div>
 
-      <div
-        v-if="showDelete"
-        class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-        @click.self="showDelete = false"
-      >
-        <div class="bg-card border border-border rounded-xl p-5 w-full max-w-sm space-y-4">
-          <div>
-            <h2 class="text-lg font-bold text-foreground">Delete game?</h2>
-            <p class="text-sm text-foreground/70 mt-1">
-              {{ game.displayName }} will be removed from the library.
-            </p>
-          </div>
-          <label class="flex items-center gap-2.5 text-sm text-foreground/85 cursor-pointer">
-            <input type="checkbox" v-model="purge" class="h-4 w-4 accent-destructive" />
-            Also delete saves, save states, box art, and guides
-          </label>
-          <div class="flex justify-end gap-2">
-            <Button variant="ghost" :disabled="deleting" @click="showDelete = false">Cancel</Button>
-            <Button variant="destructive" :disabled="deleting" @click="confirmDelete">
-              {{ deleting ? 'Deleting...' : 'Delete' }}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <MoveDialog
+        v-if="showMove"
+        :tag="props.tag"
+        :folders="platformFolders"
+        :count="1"
+        :moving-folders="[]"
+        @close="showMove = false"
+        @move="onMoveGame"
+      />
+
+      <RenameDialog
+        v-if="showRename && game"
+        :current-name="game.displayName"
+        @close="showRename = false"
+        @rename="onRenameGame"
+      />
+
+      <Modal v-if="showDelete" title="Delete game?" @close="showDelete = false">
+        <p class="text-sm text-foreground/70 mt-1">
+          {{ game.displayName }} will be removed from the library.
+        </p>
+        <label class="flex items-center gap-2.5 text-sm text-foreground/85 cursor-pointer">
+          <input type="checkbox" v-model="purge" class="h-4 w-4 accent-destructive" />
+          Also delete saves, save states, box art, and guides
+        </label>
+        <template #footer>
+          <Button variant="ghost" :disabled="deleting" @click="showDelete = false">Cancel</Button>
+          <Button variant="destructive" :disabled="deleting" @click="confirmDelete">
+            {{ deleting ? 'Deleting...' : 'Delete' }}
+          </Button>
+        </template>
+      </Modal>
     </template>
   </div>
 </template>

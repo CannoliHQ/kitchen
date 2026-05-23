@@ -1,22 +1,57 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getGames, uploadFiles, rescanPlatform, type GameRow } from '@/api/client'
+import { getGames, uploadFiles, createFolder, moveGame, moveFile, renameGame, deleteGame, deleteFile, type GameRow } from '@/api/client'
 import { platformName } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
+import Dropdown from '@/components/ui/Dropdown.vue'
+import type { DropdownItem } from '@/components/ui/Dropdown.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
 import GameCover from '@/components/game/GameCover.vue'
 import GameTable from '@/components/game/GameTable.vue'
-import { ArrowLeft, Cpu, Gamepad2, Image, LayoutGrid, Layers, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
+import FolderTile from '@/components/game/FolderTile.vue'
+import Modal from '@/components/ui/Modal.vue'
+import NewFolderDialog from '@/components/file/NewFolderDialog.vue'
+import MoveDialog from '@/components/file/MoveDialog.vue'
+import RenameDialog from '@/components/file/RenameDialog.vue'
+import { ArrowLeft, Check, CheckSquare, ChevronRight, Cpu, FolderPlus, Gamepad2, Image, LayoutGrid, Layers, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
+import { folderLeaf } from '@/lib/folders'
 
-const props = defineProps<{ tag: string }>()
+const props = defineProps<{ tag: string; folder?: string }>()
 const router = useRouter()
 
 const games = ref<GameRow[]>([])
+const allFolders = ref<string[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const search = ref('')
+
+const currentFolder = computed(() => props.folder ?? '')
+
+const currentGames = computed(() =>
+  games.value.filter(g => g.folder === currentFolder.value),
+)
+
+const currentFolders = computed(() => {
+  const cur = currentFolder.value
+  return allFolders.value.filter(f => {
+    if (cur === '') return !f.includes('/')
+    if (!f.startsWith(cur + '/')) return false
+    const remainder = f.slice(cur.length + 1)
+    return !remainder.includes('/')
+  })
+})
+
+const breadcrumbSegments = computed(() => {
+  const cur = currentFolder.value
+  if (!cur) return []
+  const parts = cur.split('/')
+  return parts.map((part, i) => ({
+    label: part,
+    path: parts.slice(0, i + 1).join('/'),
+  }))
+})
 
 const viewMode = ref<'cards' | 'table'>(
   localStorage.getItem('cannoli_view_mode') === 'table' ? 'table' : 'cards',
@@ -25,8 +60,8 @@ watch(viewMode, v => localStorage.setItem('cannoli_view_mode', v))
 
 const filtered = computed(() => {
   const q = search.value.toLowerCase().trim()
-  if (!q) return games.value
-  return games.value.filter(g => g.displayName.toLowerCase().includes(q))
+  if (!q) return currentGames.value
+  return currentGames.value.filter(g => g.displayName.toLowerCase().includes(q))
 })
 
 const PAGE_SIZE = 100
@@ -67,7 +102,8 @@ const paged = computed(() => {
   return ordered.value.slice(start, start + PAGE_SIZE)
 })
 
-watch([search, viewMode, sortKey, sortDir], () => { page.value = 1 })
+watch(currentFolder, () => { search.value = ''; selectedGameIds.clear(); selectedFolderPaths.clear() })
+watch([search, viewMode, sortKey, sortDir, currentFolder], () => { page.value = 1 })
 watch(pageCount, pc => { if (page.value > pc) page.value = pc })
 
 async function load() {
@@ -76,6 +112,7 @@ async function load() {
   try {
     const res = await getGames(props.tag)
     games.value = res.games
+    allFolders.value = res.folders
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to load games'
   } finally {
@@ -83,8 +120,116 @@ async function load() {
   }
 }
 
+function openFolder(path: string) {
+  router.push({ name: 'platform-folder', params: { tag: props.tag, folder: path } })
+}
+
 const fileInput = ref<HTMLInputElement>()
 const dragOver = ref(false)
+
+const showNewFolder = ref(false)
+
+const selectMode = ref(false)
+const selectedGameIds = reactive(new Set<number>())
+const selectedFolderPaths = reactive(new Set<string>())
+const selectedCount = computed(() => selectedGameIds.size + selectedFolderPaths.size)
+
+function toggleSelectMode() {
+  selectMode.value = !selectMode.value
+  if (!selectMode.value) {
+    selectedGameIds.clear()
+    selectedFolderPaths.clear()
+  }
+}
+
+function toggleGame(id: number) {
+  if (selectedGameIds.has(id)) selectedGameIds.delete(id)
+  else selectedGameIds.add(id)
+}
+
+function toggleFolder(path: string) {
+  if (selectedFolderPaths.has(path)) selectedFolderPaths.delete(path)
+  else selectedFolderPaths.add(path)
+}
+
+const movePromptOpen = ref(false)
+const renamePromptOpen = ref(false)
+const deletePromptOpen = ref(false)
+
+const renameTarget = computed(() => {
+  if (selectedGameIds.size === 1 && selectedFolderPaths.size === 0) {
+    const id = [...selectedGameIds][0]!
+    const game = games.value.find(g => g.id === id)
+    if (!game) return null
+    return { kind: 'game' as const, name: game.displayName, gameId: id }
+  }
+  if (selectedFolderPaths.size === 1 && selectedGameIds.size === 0) {
+    const path = [...selectedFolderPaths][0]!
+    return { kind: 'folder' as const, name: folderLeaf(path), folderPath: path }
+  }
+  return null
+})
+
+async function onRename(newName: string) {
+  const t = renameTarget.value
+  if (!t) return
+  try {
+    if (t.kind === 'game') {
+      await renameGame(props.tag, t.gameId, newName)
+    } else {
+      const parentPath = t.folderPath.split('/').slice(0, -1).join('/')
+      await moveFile('roms', [props.tag, ...t.folderPath.split('/')], [props.tag, parentPath, newName].filter(Boolean).join('/'))
+    }
+    await load()
+  } catch {
+    error.value = 'Rename failed'
+  } finally {
+    renamePromptOpen.value = false
+    if (selectMode.value) toggleSelectMode()
+  }
+}
+
+async function onMove(target: string) {
+  try {
+    for (const id of selectedGameIds) {
+      await moveGame(props.tag, id, target)
+    }
+    for (const folderPath of selectedFolderPaths) {
+      await moveFile('roms', [props.tag, ...folderPath.split('/')], [props.tag, target, folderLeaf(folderPath)].filter(Boolean).join('/'))
+    }
+    await load()
+  } catch {
+    error.value = 'Move failed'
+  } finally {
+    movePromptOpen.value = false
+    if (selectMode.value) toggleSelectMode()
+  }
+}
+
+async function onDelete() {
+  try {
+    for (const id of selectedGameIds) {
+      await deleteGame(props.tag, id, false)
+    }
+    for (const folderPath of selectedFolderPaths) {
+      await deleteFile('roms', props.tag, ...folderPath.split('/'))
+    }
+    await load()
+  } catch {
+    error.value = 'Delete failed'
+  } finally {
+    deletePromptOpen.value = false
+    if (selectMode.value) toggleSelectMode()
+  }
+}
+
+const actionItems: DropdownItem[] = [
+  { label: 'New folder', icon: FolderPlus, onSelect: () => { showNewFolder.value = true } },
+  { label: 'Upload ROMs', icon: Gamepad2, onSelect: () => fileInput.value?.click() },
+  { label: 'Art', icon: Image, onSelect: () => openArt() },
+  { label: 'Overlays', icon: Layers, onSelect: () => openOverlays() },
+  { label: 'BIOS', icon: Cpu, onSelect: () => openBios() },
+]
 const uploading = ref(false)
 const uploadProgress = ref(0)
 const uploadName = ref('')
@@ -105,12 +250,23 @@ async function doUpload(files: File[]) {
       const { promise } = uploadFiles('roms', [props.tag], [file], pct => { uploadProgress.value = pct })
       await promise
     }
-    await rescanPlatform(props.tag)
     await load()
   } catch {
     error.value = 'ROM upload failed'
   } finally {
     uploading.value = false
+  }
+}
+
+async function onCreateFolder(name: string) {
+  try {
+    const segments = currentFolder.value.split('/').filter(Boolean)
+    await createFolder('roms', props.tag, ...segments, name)
+    await load()
+  } catch {
+    error.value = 'Failed to create folder'
+  } finally {
+    showNewFolder.value = false
   }
 }
 
@@ -177,6 +333,16 @@ onBeforeUnmount(() => {
 <template>
   <div class="mx-auto max-w-7xl p-6 space-y-6">
     <input ref="fileInput" type="file" multiple class="hidden" @change="handleFiles" />
+    <NewFolderDialog v-if="showNewFolder" @close="showNewFolder = false" @create="onCreateFolder" />
+    <MoveDialog v-if="movePromptOpen" :tag="props.tag" :folders="allFolders" :count="selectedCount" :moving-folders="[...selectedFolderPaths]" @close="movePromptOpen = false" @move="onMove" />
+    <RenameDialog v-if="renamePromptOpen && renameTarget" :current-name="renameTarget.name" @close="renamePromptOpen = false" @rename="onRename" />
+    <Modal v-if="deletePromptOpen" :title="`Delete ${selectedCount} ${selectedCount === 1 ? 'item' : 'items'}?`" @close="deletePromptOpen = false">
+      <p class="text-sm text-foreground/80">The selected games and folders will be removed. Deleting a folder removes everything inside it.</p>
+      <template #footer>
+        <Button variant="ghost" @click="deletePromptOpen = false">Cancel</Button>
+        <Button variant="destructive" @click="onDelete">Delete</Button>
+      </template>
+    </Modal>
 
     <div class="flex flex-wrap items-center gap-3">
       <div class="flex items-center gap-3">
@@ -185,44 +351,8 @@ onBeforeUnmount(() => {
         </Button>
         <h1 class="text-3xl font-bold tracking-tight">{{ platformName(props.tag) }}</h1>
       </div>
-      <div class="flex flex-wrap justify-center gap-2 w-full sm:w-auto sm:ml-auto">
-        <button
-          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors disabled:opacity-50"
-          :disabled="uploading"
-          @click="fileInput?.click()"
-        >
-          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <Gamepad2 class="h-4 w-4 text-accent" />
-          </div>
-          <div class="font-semibold text-sm text-foreground">ROMs</div>
-        </button>
-        <button
-          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
-          @click="openArt"
-        >
-          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <Image class="h-4 w-4 text-accent" />
-          </div>
-          <div class="font-semibold text-sm text-foreground">Art</div>
-        </button>
-        <button
-          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
-          @click="openOverlays"
-        >
-          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <Layers class="h-4 w-4 text-accent" />
-          </div>
-          <div class="font-semibold text-sm text-foreground">Overlays</div>
-        </button>
-        <button
-          class="rounded-lg border border-border bg-card px-3 py-2 flex items-center gap-2 cursor-pointer hover:border-accent/50 transition-colors"
-          @click="openBios"
-        >
-          <div class="flex items-center justify-center h-7 w-7 rounded-md bg-accent/15">
-            <Cpu class="h-4 w-4 text-accent" />
-          </div>
-          <div class="font-semibold text-sm text-foreground">BIOS</div>
-        </button>
+      <div class="sm:ml-auto">
+        <Dropdown :items="actionItems" />
       </div>
     </div>
 
@@ -236,30 +366,87 @@ onBeforeUnmount(() => {
       <Progress :value="uploadProgress" class="!h-2.5" />
     </div>
 
+    <nav v-if="currentFolder" class="flex items-center gap-1 text-sm text-foreground/60 flex-wrap">
+      <button
+        class="hover:text-foreground transition-colors"
+        @click="router.push({ name: 'platform', params: { tag: props.tag } })"
+      >{{ platformName(props.tag) }}</button>
+      <template v-for="(seg, i) in breadcrumbSegments" :key="seg.path">
+        <ChevronRight class="h-3.5 w-3.5 shrink-0" />
+        <span
+          v-if="i === breadcrumbSegments.length - 1"
+          class="text-foreground font-medium"
+        >{{ seg.label }}</span>
+        <button
+          v-else
+          class="hover:text-foreground transition-colors"
+          @click="router.push({ name: 'platform-folder', params: { tag: props.tag, folder: seg.path } })"
+        >{{ seg.label }}</button>
+      </template>
+    </nav>
+
+    <div
+      v-if="selectMode && selectedCount > 0"
+      class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2"
+    >
+      <span class="text-sm font-medium text-foreground">{{ selectedCount }} selected</span>
+      <div class="flex items-center gap-2 sm:ml-auto flex-wrap">
+        <button
+          class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          @click="movePromptOpen = true"
+        >Move</button>
+        <button
+          class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="!renameTarget"
+          @click="renamePromptOpen = true"
+        >Rename</button>
+        <button
+          class="rounded-md border border-destructive/60 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+          @click="deletePromptOpen = true"
+        >Delete</button>
+        <button
+          class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted"
+          @click="toggleSelectMode"
+        >Done</button>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between gap-3">
       <div class="relative w-64">
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/70 pointer-events-none" />
         <Input v-model="search" placeholder="Search games..." class="!pl-9 !h-10 !text-base !rounded-lg" />
       </div>
-      <div class="flex rounded-lg border border-border overflow-hidden">
+      <div class="flex items-center gap-2">
         <button
-          class="p-2 transition-colors"
-          :class="viewMode === 'cards' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
-          :aria-pressed="viewMode === 'cards'"
-          title="Card view"
-          @click="viewMode = 'cards'"
+          class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
+          :class="selectMode ? 'border-accent bg-accent/10 text-accent' : 'border-border text-foreground/70 hover:text-foreground'"
+          :aria-pressed="selectMode"
+          title="Select items"
+          @click="toggleSelectMode"
         >
-          <LayoutGrid class="h-4 w-4" />
+          <CheckSquare class="h-4 w-4" />
+          Select
         </button>
-        <button
-          class="p-2 transition-colors border-l border-border"
-          :class="viewMode === 'table' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
-          :aria-pressed="viewMode === 'table'"
-          title="Table view"
-          @click="viewMode = 'table'"
-        >
-          <TableIcon class="h-4 w-4" />
-        </button>
+        <div class="flex rounded-lg border border-border overflow-hidden">
+          <button
+            class="p-2 transition-colors"
+            :class="viewMode === 'cards' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
+            :aria-pressed="viewMode === 'cards'"
+            title="Card view"
+            @click="viewMode = 'cards'"
+          >
+            <LayoutGrid class="h-4 w-4" />
+          </button>
+          <button
+            class="p-2 transition-colors border-l border-border"
+            :class="viewMode === 'table' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
+            :aria-pressed="viewMode === 'table'"
+            title="Table view"
+            @click="viewMode = 'table'"
+          >
+            <TableIcon class="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -268,7 +455,7 @@ onBeforeUnmount(() => {
       <p class="text-destructive">{{ error }}</p>
       <Button variant="outline" size="sm" @click="load">Retry</Button>
     </div>
-    <p v-else-if="!filtered.length" class="text-base text-foreground/75 py-8 text-center">
+    <p v-else-if="!filtered.length && !currentFolders.length" class="text-base text-foreground/75 py-8 text-center">
       {{ search ? `No games match "${search}".` : 'No games yet.' }}
     </p>
     <div
@@ -276,21 +463,52 @@ onBeforeUnmount(() => {
       class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4"
     >
       <button
+        v-for="folderPath in currentFolders"
+        :key="'folder:' + folderPath"
+        class="relative text-left transition-transform"
+        :class="!selectMode ? 'hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40' : selectedFolderPaths.has(folderPath) ? 'ring-2 ring-accent rounded-sm' : ''"
+        @click="selectMode ? toggleFolder(folderPath) : openFolder(folderPath)"
+      >
+        <span
+          v-if="selectMode"
+          class="absolute top-1.5 left-1.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded border-2 border-white/60 bg-black/60"
+          :class="selectedFolderPaths.has(folderPath) ? 'bg-accent border-accent' : ''"
+        >
+          <Check v-if="selectedFolderPaths.has(folderPath)" class="h-3 w-3 text-white" />
+        </span>
+        <FolderTile :name="folderLeaf(folderPath)" />
+      </button>
+      <button
         v-for="game in paged"
         :key="game.id"
-        class="text-left transition-transform hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40"
-        @click="openGame(game.id)"
+        class="relative text-left transition-transform"
+        :class="!selectMode ? 'hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40' : selectedGameIds.has(game.id) ? 'ring-2 ring-accent rounded-sm' : ''"
+        @click="selectMode ? toggleGame(game.id) : openGame(game.id)"
       >
+        <span
+          v-if="selectMode"
+          class="absolute top-1.5 left-1.5 z-10 inline-flex h-5 w-5 items-center justify-center rounded border-2 border-white/60 bg-black/60"
+          :class="selectedGameIds.has(game.id) ? 'bg-accent border-accent' : ''"
+        >
+          <Check v-if="selectedGameIds.has(game.id)" class="h-3 w-3 text-white" />
+        </span>
         <GameCover :tag="props.tag" :game="game" />
       </button>
     </div>
     <GameTable
       v-else
       :games="paged"
+      :folders="currentFolders"
       :sort-key="sortKey"
       :sort-dir="sortDir"
+      :select-mode="selectMode"
+      :selected-game-ids="selectedGameIds"
+      :selected-folder-paths="selectedFolderPaths"
       @open="openGame"
       @sort="setSort"
+      @open-folder="openFolder"
+      @toggle-game="toggleGame"
+      @toggle-folder="toggleFolder"
     />
 
     <div v-if="!loading && !error && filtered.length" class="flex flex-col items-center gap-3 pt-1">
