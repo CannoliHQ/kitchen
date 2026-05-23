@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGames, uploadFiles, createFolder, moveGame, moveFile, renameGame, deleteGame, deleteFile, type GameRow } from '@/api/client'
 import { platformName } from '@/api/platforms'
@@ -64,7 +64,42 @@ const filtered = computed(() => {
   return currentGames.value.filter(g => g.displayName.toLowerCase().includes(q))
 })
 
-const PAGE_SIZE = 100
+const gridRef = ref<HTMLElement | null>(null)
+const pageSize = ref(24)
+const VIEWPORT_RESERVED_PX = 280
+
+function recomputePageSize() {
+  const el = gridRef.value
+  if (!el || el.children.length === 0) return
+  const firstChild = el.children[0] as HTMLElement
+  const cardWidth = firstChild.offsetWidth
+  const cardHeight = firstChild.offsetHeight
+  if (cardWidth <= 0 || cardHeight <= 0) return
+  const style = getComputedStyle(el)
+  const gap = parseFloat(style.rowGap) || 0
+  const gridWidth = el.clientWidth
+  const cols = Math.max(1, Math.floor((gridWidth + gap) / (cardWidth + gap)))
+  const availableHeight = window.innerHeight - VIEWPORT_RESERVED_PX
+  const rows = Math.max(1, Math.floor((availableHeight + gap) / (cardHeight + gap)))
+  pageSize.value = cols * rows
+}
+
+let resizeObserver: ResizeObserver | null = null
+onMounted(() => {
+  nextTick(recomputePageSize)
+  resizeObserver = new ResizeObserver(() => recomputePageSize())
+  window.addEventListener('resize', recomputePageSize)
+})
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  window.removeEventListener('resize', recomputePageSize)
+})
+watch(gridRef, el => {
+  resizeObserver?.disconnect()
+  if (el) resizeObserver?.observe(el)
+  nextTick(recomputePageSize)
+})
+
 const page = ref(1)
 const sortKey = ref<string>('title')
 const sortDir = ref<1 | -1>(1)
@@ -96,11 +131,13 @@ const ordered = computed(() => {
   return arr
 })
 
-const pageCount = computed(() => Math.max(1, Math.ceil(ordered.value.length / PAGE_SIZE)))
+const pageCount = computed(() => Math.max(1, Math.ceil(ordered.value.length / pageSize.value)))
 const paged = computed(() => {
-  const start = (page.value - 1) * PAGE_SIZE
-  return ordered.value.slice(start, start + PAGE_SIZE)
+  const start = (page.value - 1) * pageSize.value
+  return ordered.value.slice(start, start + pageSize.value)
 })
+
+watch([viewMode, () => filtered.value.length], () => nextTick(recomputePageSize))
 
 watch(currentFolder, () => { search.value = ''; selectedGameIds.clear(); selectedFolderPaths.clear() })
 watch([search, viewMode, sortKey, sortDir, currentFolder], () => { page.value = 1 })
@@ -460,7 +497,9 @@ onBeforeUnmount(() => {
     </p>
     <div
       v-else-if="viewMode === 'cards'"
-      class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4"
+      ref="gridRef"
+      class="grid gap-3 sm:gap-4"
+      style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));"
     >
       <button
         v-for="folderPath in currentFolders"
@@ -511,13 +550,10 @@ onBeforeUnmount(() => {
       @toggle-folder="toggleFolder"
     />
 
-    <div v-if="!loading && !error && filtered.length" class="flex flex-col items-center gap-3 pt-1">
-      <div v-if="pageCount > 1" class="flex items-center gap-3">
-        <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--">Prev</Button>
-        <span class="text-sm text-foreground/70">Page {{ page }} of {{ pageCount }}</span>
-        <Button variant="outline" size="sm" :disabled="page >= pageCount" @click="page++">Next</Button>
-      </div>
-      <div class="text-sm text-foreground/60">{{ filtered.length }} game{{ filtered.length === 1 ? '' : 's' }}</div>
+    <div v-if="!loading && !error && pageCount > 1" class="flex items-center justify-center gap-3 pt-1">
+      <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--">Prev</Button>
+      <span class="text-sm text-foreground/70">Page {{ page }} of {{ pageCount }}</span>
+      <Button variant="outline" size="sm" :disabled="page >= pageCount" @click="page++">Next</Button>
     </div>
 
     <div
