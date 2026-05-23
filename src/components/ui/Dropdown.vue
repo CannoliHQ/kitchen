@@ -51,29 +51,41 @@ onUnmounted(() => {
 <template>
   <div ref="containerRef" class="relative inline-block">
     <button
+      v-if="items.length === 1"
       class="inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium h-10 px-5 py-2 border border-border bg-transparent hover:bg-muted hover:border-muted-foreground/30 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer"
-      @click="toggle"
+      :class="items[0]!.danger ? 'text-destructive' : 'text-foreground'"
+      @click="items[0]!.onSelect()"
     >
-      <slot>
-        Actions
-        <ChevronDown class="h-4 w-4" />
-      </slot>
+      <component :is="items[0]!.icon" v-if="items[0]!.icon" class="h-4 w-4 shrink-0" />
+      {{ items[0]!.label }}
     </button>
 
-    <div
-      v-if="open"
-      class="absolute left-0 top-full mt-1 z-50 min-w-40 rounded-lg border border-border bg-card shadow-lg py-1"
-    >
+    <template v-else>
       <button
-        v-for="item in items"
-        :key="item.label"
-        class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted transition-colors duration-100 cursor-pointer"
-        :class="item.danger ? 'text-destructive' : 'text-foreground'"
-        @click="select(item)"
+        class="inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium h-10 px-5 py-2 border border-border bg-transparent hover:bg-muted hover:border-muted-foreground/30 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer"
+        @click="toggle"
       >
-        <component :is="item.icon" v-if="item.icon" class="h-4 w-4 shrink-0" />
-        {{ item.label }}
+        <slot>
+          Actions
+          <ChevronDown class="h-4 w-4" />
+        </slot>
       </button>
-    </div>
+
+      <div
+        v-if="open"
+        class="absolute left-0 top-full mt-1 z-50 min-w-40 rounded-lg border border-border bg-card shadow-lg py-1"
+      >
+        <button
+          v-for="item in items"
+          :key="item.label"
+          class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted transition-colors duration-100 cursor-pointer"
+          :class="item.danger ? 'text-destructive' : 'text-foreground'"
+          @click="select(item)"
+        >
+          <component :is="item.icon" v-if="item.icon" class="h-4 w-4 shrink-0" />
+          {{ item.label }}
+        </button>
+      </div>
+    </template>
   </div>
 </template>

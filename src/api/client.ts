@@ -191,6 +191,12 @@ export async function gameArtBlob(tag: string, id: number): Promise<string | nul
   return URL.createObjectURL(await res.blob())
 }
 
+export async function resourceFileBlob(resource: string, tag: string, name: string): Promise<string | null> {
+  const res = await request(buildPath(resource, tag, name))
+  if (!res.ok) return null
+  return URL.createObjectURL(await res.blob())
+}
+
 export async function uploadGameArt(tag: string, id: number, file: File): Promise<void> {
   const res = await request(`${gameBase(tag, id)}/art?name=${encodeURIComponent(file.name)}`, {
     method: 'POST',

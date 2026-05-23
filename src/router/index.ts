@@ -18,6 +18,18 @@ const router = createRouter({
       props: true,
     },
     {
+      path: '/platform/:tag/overlays',
+      name: 'platform-overlays',
+      component: PlatformView,
+      props: route => ({ tag: route.params.tag, tab: 'overlays' }),
+    },
+    {
+      path: '/platform/:tag/bios',
+      name: 'platform-bios',
+      component: PlatformView,
+      props: route => ({ tag: route.params.tag, tab: 'bios' }),
+    },
+    {
       path: '/platform/:tag/game/:id/:tab?',
       name: 'game',
       component: () => import('@/views/GameDetailView.vue'),
