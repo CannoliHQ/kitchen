@@ -444,7 +444,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl p-6 space-y-6">
+  <div class="mx-auto max-w-[1600px] p-6 space-y-6">
     <!-- Header -->
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="goBack">
@@ -526,7 +526,7 @@ onMounted(load)
         <div>
           <p class="text-sm text-muted-foreground">Drag files here or</p>
           <button
-            class="mt-1 text-sm font-medium text-accent hover:text-tan-light cursor-pointer"
+            class="mt-1 text-sm font-medium text-foreground hover:text-muted-foreground cursor-pointer"
             :disabled="uploading"
             @click="triggerUpload"
           >
@@ -576,7 +576,7 @@ onMounted(load)
           </div>
         </div>
       </div>
-      <div v-if="uploadResult.length" class="mt-3 flex items-center justify-center gap-2 text-sm text-accent">
+      <div v-if="uploadResult.length" class="mt-3 flex items-center justify-center gap-2 text-sm text-foreground">
         <CheckCircle class="h-4 w-4" />
         <span>Uploaded {{ uploadResult.length }} file{{ uploadResult.length > 1 ? 's' : '' }}</span>
       </div>
@@ -627,7 +627,7 @@ onMounted(load)
     <!-- Rename dialog -->
     <div v-if="renamingEntry" class="rounded-xl border border-accent/50 bg-card p-4 space-y-3">
       <p class="text-sm">
-        Rename <span class="font-semibold text-accent">{{ renamingEntry }}</span>
+        Rename <span class="font-semibold text-foreground">{{ renamingEntry }}</span>
       </p>
       <Input
         v-model="renameValue"
@@ -645,7 +645,7 @@ onMounted(load)
     <!-- Move dialog with directory browser -->
     <div v-if="movingEntry" class="rounded-xl border border-accent/50 bg-card p-4 space-y-3">
       <p class="text-sm">
-        Move <span class="font-semibold text-accent">{{ movingEntry }}</span> to:
+        Move <span class="font-semibold text-foreground">{{ movingEntry }}</span> to:
       </p>
 
       <!-- Current path display -->
@@ -744,7 +744,7 @@ onMounted(load)
               >
                 <template v-if="artPickerFile">
                   <Image class="h-8 w-8 mx-auto text-accent" />
-                  <p class="mt-2 text-sm font-medium text-accent">{{ artPickerFile.name }}</p>
+                  <p class="mt-2 text-sm font-medium text-foreground">{{ artPickerFile.name }}</p>
                 </template>
                 <template v-else>
                   <ImagePlus class="h-8 w-8 mx-auto text-muted-foreground" />

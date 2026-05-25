@@ -97,7 +97,7 @@ const actionItems = computed<DropdownItem[]>(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl p-6 space-y-6">
+  <div class="mx-auto max-w-[1600px] p-6 space-y-6">
     <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtFiles" />
 
     <div class="flex flex-wrap items-center gap-3">
@@ -138,7 +138,7 @@ const actionItems = computed<DropdownItem[]>(() => {
         v-for="t in tabs"
         :key="t.key"
         class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap"
-        :class="activeTab === t.key ? 'border-accent text-accent' : 'border-transparent text-foreground/75 hover:text-foreground'"
+        :class="activeTab === t.key ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
         @click="selectTab(t.key)"
       >
         {{ t.label }}

@@ -3,19 +3,19 @@
 @theme {
   /* Cannoli OS palette */
   --color-background: #161618;
-  --color-foreground: #faf0dc;
+  --color-foreground: #ffffff;
   --color-card: #24211c;
-  --color-card-foreground: #faf0dc;
-  --color-primary: #4a9ab5;
-  --color-primary-light: #80c1dd;
-  --color-primary-dark: #357a94;
+  --color-card-foreground: #ffffff;
+  --color-primary: #a3b87f;
+  --color-primary-light: #bccc9f;
+  --color-primary-dark: #87a065;
   --color-primary-foreground: #161618;
   --color-muted: #2a2620;
-  --color-muted-foreground: #b8a98f;
+  --color-muted-foreground: #d4d4d4;
   --color-border: #322d24;
   --color-input: #322d24;
-  --color-ring: #4a9ab5;
-  --color-destructive: #c45050;
+  --color-ring: #a3b87f;
+  --color-destructive: #e05872;
   --color-accent: #d9a06a;
   --color-accent-foreground: #161618;
   --color-cream: #f5e6ca;
@@ -25,6 +25,10 @@
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
+}
+
+html {
+  font-size: 18px;
 }
 
 body {

@@ -202,7 +202,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl p-6">
+  <div class="mx-auto max-w-[1600px] p-6">
     <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
     <div v-else-if="error" class="text-base py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
@@ -291,7 +291,7 @@ onBeforeUnmount(() => {
           v-for="t in tabs"
           :key="t.key"
           class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap"
-          :class="activeTab === t.key ? 'border-accent text-accent' : 'border-transparent text-foreground/75 hover:text-foreground'"
+          :class="activeTab === t.key ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
           @click="selectTab(t.key)"
         >
           {{ t.label }}<span v-if="t.count !== null"> ({{ t.count }})</span>

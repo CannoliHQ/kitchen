@@ -61,7 +61,7 @@ function cancelNewFolder() {
     <div class="space-y-1 max-h-64 overflow-y-auto -mx-1 px-1">
       <button
         class="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors"
-        :class="selectedTarget === '' ? 'bg-accent/15 text-accent' : 'text-foreground hover:bg-muted'"
+        :class="selectedTarget === '' ? 'bg-accent/15 text-foreground' : 'text-foreground hover:bg-muted'"
         @click="selectedTarget = ''"
       >
         <span
@@ -75,7 +75,7 @@ function cancelNewFolder() {
         v-for="folder in localFolders"
         :key="folder"
         class="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors"
-        :class="selectedTarget === folder ? 'bg-accent/15 text-accent' : 'text-foreground hover:bg-muted'"
+        :class="selectedTarget === folder ? 'bg-accent/15 text-foreground' : 'text-foreground hover:bg-muted'"
         :style="{ paddingLeft: `${(depthOf(folder) + 1) * 16 + 8}px` }"
         @click="selectedTarget = folder"
       >

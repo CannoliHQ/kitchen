@@ -480,7 +480,7 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-2">
         <button
           class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
-          :class="selectMode ? 'border-accent bg-accent/10 text-accent' : 'border-border text-foreground/70 hover:text-foreground'"
+          :class="selectMode ? 'border-accent bg-accent/10 text-foreground' : 'border-border text-foreground/70 hover:text-foreground'"
           :aria-pressed="selectMode"
           title="Select items"
           @click="toggleSelectMode"

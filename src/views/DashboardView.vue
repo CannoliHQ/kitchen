@@ -3,7 +3,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTags, clearCredentials } from '@/api/client'
 import { platformName, platformLabel, platformIcon, groupPlatforms, type PlatformGroup } from '@/api/platforms'
-import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import { Wallpaper, LogOut, Search, Gamepad2, ArrowDownAZ, CalendarDays, Palette, Layers } from 'lucide-vue-next'
@@ -60,7 +59,7 @@ function disconnect() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-7xl p-6 pb-0 space-y-8 min-h-screen flex flex-col">
+  <div class="mx-auto max-w-[1600px] p-6 pb-0 space-y-8 min-h-screen flex flex-col">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -77,14 +76,14 @@ function disconnect() {
     <div class="flex items-center gap-1 border-b border-border">
       <button
         class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
-        :class="activeTab === 'content' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        :class="activeTab === 'content' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
         @click="selectTab('content')"
       >
         Games
       </button>
       <button
         class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
-        :class="activeTab === 'customization' ? 'border-accent text-accent' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        :class="activeTab === 'customization' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
         @click="selectTab('customization')"
       >
         Customization
@@ -132,10 +131,11 @@ function disconnect() {
           <div v-for="group in groups" :key="group.name">
             <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{{ group.name }}</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div
+              <button
                 v-for="tag in group.tags"
                 :key="tag"
-                class="group cursor-pointer rounded-xl border border-border bg-card px-5 py-5 flex items-center gap-4 hover:border-accent/50 hover:shadow-md hover:shadow-accent/5"
+                type="button"
+                class="group text-left cursor-pointer rounded-xl border border-border bg-card px-5 py-5 flex items-center gap-4 hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 @click="openPlatform(tag)"
               >
                 <img
@@ -145,8 +145,8 @@ function disconnect() {
                   class="h-12 w-12 shrink-0 object-contain"
                 />
                 <Gamepad2 v-else class="h-12 w-12 shrink-0 text-muted-foreground" />
-                <span class="font-semibold group-hover:text-accent">{{ platformName(tag) }}</span>
-              </div>
+                <span class="font-semibold">{{ platformName(tag) }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -156,10 +156,11 @@ function disconnect() {
           <div v-for="group in alphabeticalGroups" :key="group.name">
             <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">{{ group.name }}</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div
+              <button
                 v-for="tag in group.tags"
                 :key="tag"
-                class="group cursor-pointer rounded-xl border border-border bg-card px-5 py-5 flex items-center gap-4 hover:border-accent/50 hover:shadow-md hover:shadow-accent/5"
+                type="button"
+                class="group text-left cursor-pointer rounded-xl border border-border bg-card px-5 py-5 flex items-center gap-4 hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 @click="openPlatform(tag)"
               >
                 <img
@@ -169,8 +170,8 @@ function disconnect() {
                   class="h-12 w-12 shrink-0 object-contain"
                 />
                 <Gamepad2 v-else class="h-12 w-12 shrink-0 text-muted-foreground" />
-                <span class="font-semibold group-hover:text-accent">{{ platformName(tag) }}</span>
-              </div>
+                <span class="font-semibold">{{ platformName(tag) }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -181,8 +182,9 @@ function disconnect() {
     <template v-if="activeTab === 'customization'">
       <div class="space-y-4 flex-1">
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <Card
-            class="cursor-pointer hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 !p-5"
+          <button
+            type="button"
+            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             @click="browseFlat('wallpapers')"
           >
             <div class="flex items-center gap-3">
@@ -191,9 +193,10 @@ function disconnect() {
               </div>
               <span class="font-semibold">Wallpapers</span>
             </div>
-          </Card>
-          <Card
-            class="cursor-pointer hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 !p-5"
+          </button>
+          <button
+            type="button"
+            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             @click="browseFlat('shaders')"
           >
             <div class="flex items-center gap-3">
@@ -202,9 +205,10 @@ function disconnect() {
               </div>
               <span class="font-semibold">Shaders</span>
             </div>
-          </Card>
-          <Card
-            class="cursor-pointer hover:border-accent/50 hover:shadow-md hover:shadow-accent/5 !p-5"
+          </button>
+          <button
+            type="button"
+            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             @click="browseFlat('overlays')"
           >
             <div class="flex items-center gap-3">
@@ -213,7 +217,7 @@ function disconnect() {
               </div>
               <span class="font-semibold">Overlays</span>
             </div>
-          </Card>
+          </button>
         </div>
       </div>
     </template>
