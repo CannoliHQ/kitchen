@@ -196,14 +196,18 @@ function disconnect() {
           </button>
           <button
             type="button"
-            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            @click="browseFlat('shaders')"
+            disabled
+            aria-disabled="true"
+            class="text-left rounded-xl border border-border bg-card p-5 opacity-50 cursor-not-allowed"
           >
             <div class="flex items-center gap-3">
               <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
                 <Palette class="h-5 w-5 text-accent" />
               </div>
-              <span class="font-semibold">Shaders</span>
+              <div class="flex flex-col">
+                <span class="font-semibold">Shaders</span>
+                <span class="text-xs text-muted-foreground">Coming Soon ™</span>
+              </div>
             </div>
           </button>
           <button
