@@ -229,6 +229,7 @@ function disconnect() {
     <!-- Footer -->
     <footer class="pt-8 pb-6 text-center text-xs text-muted-foreground/60 border-t border-border/50">
       Platform icons courtesy of <a href="https://git.libretro.com/libretro-assets/retroarch-assets" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Libretro</a> (CC BY 4.0).<br />
+      PICO-8 logo courtesy of <a href="https://www.lexaloffle.com/pico-8.php" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Lexaloffle</a>.<br />
       All trademarks are property of their respective owners.
     </footer>
   </div>
