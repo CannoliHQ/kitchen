@@ -489,7 +489,7 @@ onMounted(load)
       </Button>
       <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtUpload" />
     </div>
-    <div v-else-if="!['guides', 'states', 'art', 'bios', 'saves'].includes(props.resource)" class="flex items-center gap-2">
+    <div v-else-if="!['guides', 'states', 'art', 'bios', 'saves', 'wallpapers'].includes(props.resource)" class="flex items-center gap-2">
       <Button variant="outline" size="sm" @click="showNewFolder = !showNewFolder">
         <FolderPlus class="h-4 w-4" />
         New folder
@@ -609,6 +609,7 @@ onMounted(load)
           <Pencil class="h-3.5 w-3.5" />
         </button>
         <button
+          v-if="props.resource !== 'wallpapers'"
           class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
           @click.stop="startMove(entry.name)"
         >
