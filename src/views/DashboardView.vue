@@ -6,6 +6,7 @@ import { platformName, platformLabel, platformIcon, groupPlatforms, type Platfor
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import { Wallpaper, LogOut, Search, Gamepad2, ArrowDownAZ, CalendarDays, Palette, Layers } from 'lucide-vue-next'
+import ToolsTab from '@/components/tools/ToolsTab.vue'
 
 const props = defineProps<{ tab?: string }>()
 const router = useRouter()
@@ -16,12 +17,14 @@ const sortMode = ref<'era' | 'alpha'>(
   localStorage.getItem('cannoli_sort_mode') === 'alpha' ? 'alpha' : 'era',
 )
 watch(sortMode, v => localStorage.setItem('cannoli_sort_mode', v))
-const activeTab = computed<'content' | 'customization'>(() =>
-  props.tab === 'customization' ? 'customization' : 'content',
-)
+const activeTab = computed<'content' | 'customization' | 'tools'>(() => {
+  if (props.tab === 'customization') return 'customization'
+  if (props.tab === 'tools') return 'tools'
+  return 'content'
+})
 
-function selectTab(tab: 'content' | 'customization') {
-  router.replace(`/dashboard/${tab === 'content' ? 'games' : 'customization'}`)
+function selectTab(tab: 'content' | 'customization' | 'tools') {
+  router.replace('/dashboard/' + (tab === 'content' ? 'games' : tab))
 }
 
 const filteredTags = computed(() => {
@@ -87,6 +90,13 @@ function disconnect() {
         @click="selectTab('customization')"
       >
         Customization
+      </button>
+      <button
+        class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+        :class="activeTab === 'tools' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        @click="selectTab('tools')"
+      >
+        Tools
       </button>
     </div>
 
@@ -176,6 +186,11 @@ function disconnect() {
           </div>
         </div>
       </div>
+    </template>
+
+    <!-- Tools tab -->
+    <template v-if="activeTab === 'tools'">
+      <ToolsTab class="flex-1" />
     </template>
 
     <!-- Customization tab -->

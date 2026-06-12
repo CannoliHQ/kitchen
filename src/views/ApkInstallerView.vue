@@ -1,0 +1,149 @@
+<script setup lang="ts">
+import { ref, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { uploadApk, getApkStatus } from '@/api/client'
+import Button from '@/components/ui/Button.vue'
+import Progress from '@/components/ui/Progress.vue'
+import { ArrowLeft, PackagePlus, CheckCircle2, XCircle, Smartphone } from 'lucide-vue-next'
+
+type Phase = 'idle' | 'uploading' | 'waiting' | 'success' | 'failure'
+
+const router = useRouter()
+const phase = ref<Phase>('idle')
+const progress = ref(0)
+const error = ref('')
+const fileName = ref('')
+const dragOver = ref(false)
+const fileInput = ref<HTMLInputElement>()
+let pollTimer: ReturnType<typeof setInterval> | undefined
+let abortUpload: (() => void) | null = null
+let uploadCancelled = false
+
+onUnmounted(() => {
+  clearInterval(pollTimer)
+  uploadCancelled = true
+  abortUpload?.()
+})
+
+function onDrop(e: DragEvent) {
+  dragOver.value = false
+  const file = e.dataTransfer?.files[0]
+  if (file) install(file)
+}
+
+function onPick(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) install(file)
+}
+
+async function install(file: File) {
+  if (!file.name.toLowerCase().endsWith('.apk')) {
+    error.value = 'Only .apk files can be installed.'
+    phase.value = 'failure'
+    return
+  }
+  fileName.value = file.name
+  phase.value = 'uploading'
+  progress.value = 0
+  error.value = ''
+  uploadCancelled = false
+  try {
+    const { promise, abort } = uploadApk(file, pct => (progress.value = pct))
+    abortUpload = abort
+    const { installId } = await promise
+    abortUpload = null
+    phase.value = 'waiting'
+    poll(installId)
+  } catch {
+    abortUpload = null
+    if (!uploadCancelled) {
+      error.value = 'Upload failed.'
+      phase.value = 'failure'
+    }
+  }
+}
+
+function cancelUpload() {
+  uploadCancelled = true
+  abortUpload?.()
+  reset()
+}
+
+function poll(installId: string) {
+  pollTimer = setInterval(async () => {
+    try {
+      const s = await getApkStatus(installId)
+      if (s.status === 'success') {
+        clearInterval(pollTimer)
+        phase.value = 'success'
+      } else if (s.status === 'failure') {
+        clearInterval(pollTimer)
+        error.value = s.message ?? 'Install failed.'
+        phase.value = 'failure'
+      }
+    } catch {
+    }
+  }, 1500)
+}
+
+function reset() {
+  clearInterval(pollTimer)
+  phase.value = 'idle'
+  progress.value = 0
+  error.value = ''
+  fileName.value = ''
+}
+</script>
+
+<template>
+  <div class="mx-auto max-w-[700px] p-6 space-y-6">
+    <div class="flex items-center gap-3">
+      <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard', params: { tab: 'tools' } })">
+        <ArrowLeft class="h-4 w-4" />
+      </Button>
+      <h1 class="text-xl font-bold">APK Installer</h1>
+    </div>
+
+    <div
+      v-if="phase === 'idle'"
+      class="rounded-xl border-2 border-dashed p-12 text-center transition-colors cursor-pointer"
+      :class="dragOver ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/50'"
+      @dragover.prevent="dragOver = true"
+      @dragleave="dragOver = false"
+      @drop.prevent="onDrop"
+      @click="fileInput?.click()"
+    >
+      <PackagePlus class="mx-auto h-10 w-10 text-muted-foreground" />
+      <p class="mt-4 text-sm font-medium">Drop an APK here, or click to choose one</p>
+      <p class="mt-1 text-sm text-muted-foreground">You will confirm the install on the device.</p>
+      <input ref="fileInput" type="file" accept=".apk" class="hidden" @change="onPick" />
+    </div>
+
+    <div v-else class="rounded-xl border border-border bg-card p-8 space-y-4 text-center">
+      <template v-if="phase === 'uploading'">
+        <p class="text-sm font-medium">Uploading {{ fileName }}...</p>
+        <Progress :value="progress" />
+        <Button variant="outline" @click="cancelUpload">Cancel</Button>
+      </template>
+
+      <template v-else-if="phase === 'waiting'">
+        <Smartphone class="mx-auto h-10 w-10 text-accent animate-pulse" />
+        <p class="text-sm font-medium">Waiting for confirmation on the device</p>
+        <p class="text-sm text-muted-foreground">Confirm the install prompt on your device.</p>
+      </template>
+
+      <template v-else-if="phase === 'success'">
+        <CheckCircle2 class="mx-auto h-10 w-10 text-green-500" />
+        <p class="text-sm font-medium">{{ fileName }} installed</p>
+        <Button variant="outline" @click="reset">Install another</Button>
+      </template>
+
+      <template v-else>
+        <XCircle class="mx-auto h-10 w-10 text-destructive" />
+        <p class="text-sm font-medium">Install failed</p>
+        <p class="text-sm text-muted-foreground">{{ error }}</p>
+        <Button variant="outline" @click="reset">Try again</Button>
+      </template>
+    </div>
+  </div>
+</template>

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, type FileEntry } from '@/api/client'
+import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, downloadToDisk, type FileEntry } from '@/api/client'
 import { platformName } from '@/api/platforms'
+import { confirm } from '@/lib/confirm'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2 } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2, Download } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -34,6 +35,7 @@ const showNewFolder = ref(false)
 const newFolderName = ref('')
 const creatingFolder = ref(false)
 const deleting = ref<string | null>(null)
+const downloading = ref<string | null>(null)
 const movingEntry = ref<string | null>(null)
 const moveBrowsePath = ref<string[]>([])
 const moveFolders = ref<string[]>([])
@@ -65,6 +67,7 @@ const subpath = computed<string[]>(() => {
 const apiSegments = computed(() => [props.tag, ...subpath.value].filter(Boolean) as string[])
 
 const resourceLabel = computed(() => {
+  if (props.resource === 'fs') return (route.query.label as string) || props.tag || 'fs'
   const labels: Record<string, string> = {
     roms: 'ROMs', art: 'Box Art', saves: 'Saves',
     states: 'Save States', bios: 'BIOS', wallpapers: 'Wallpapers',
@@ -74,6 +77,9 @@ const resourceLabel = computed(() => {
 })
 
 const title = computed(() => {
+  if (props.resource === 'fs') {
+    return (route.query.label as string) || props.tag || 'Files'
+  }
   if ((props.resource === 'guides' || props.resource === 'states') && subpath.value.length) {
     return `${resourceLabel.value} - ${subpath.value[subpath.value.length - 1]}`
   }
@@ -218,7 +224,9 @@ async function reload() {
 }
 
 function navigateTo(pathSegments: string[]) {
-  const query = pathSegments.length ? { path: pathSegments.join('/') } : undefined
+  const label = route.query.label as string | undefined
+  const baseQuery = label ? { label } : {}
+  const query = pathSegments.length ? { ...baseQuery, path: pathSegments.join('/') } : (label ? baseQuery : undefined)
   router.push({
     name: props.tag ? 'browse' : 'browse-flat',
     params: props.tag ? { resource: props.resource, tag: props.tag } : { resource: props.resource },
@@ -233,6 +241,8 @@ function openFolder(name: string) {
 function goBack() {
   if (subpath.value.length > 0) {
     navigateTo(subpath.value.slice(0, -1))
+  } else if (props.resource === 'fs') {
+    router.push({ name: 'tools-files' })
   } else {
     router.push(props.tag ? { name: 'platform', params: { tag: props.tag } } : { name: 'dashboard', params: { tab: 'customization' } })
   }
@@ -306,13 +316,28 @@ function cancelUpload() {
   abortUpload.value?.()
 }
 
-async function handleDelete(name: string) {
-  deleting.value = name
+async function handleDelete(entry: FileEntry) {
+  if (props.resource === 'fs') {
+    const title = entry.type === 'dir'
+      ? `Delete "${entry.name}" and everything inside it?`
+      : `Delete "${entry.name}"?`
+    if (!await confirm({ title, confirmLabel: 'Delete', destructive: true })) return
+  }
+  deleting.value = entry.name
   try {
-    await deleteFile(props.resource, ...apiSegments.value, name)
+    await deleteFile(props.resource, ...apiSegments.value, entry.name)
     await reload()
   } finally {
     deleting.value = null
+  }
+}
+
+async function handleDownload(name: string) {
+  downloading.value = name
+  try {
+    await downloadToDisk(props.resource, [...apiSegments.value, name], name)
+  } finally {
+    downloading.value = null
   }
 }
 
@@ -362,7 +387,8 @@ async function moveBrowseToRoot() {
 async function confirmMove() {
   if (!movingEntry.value) return
   const fromSegments = [...apiSegments.value, movingEntry.value]
-  const destPath = [props.tag, ...moveBrowsePath.value, movingEntry.value].filter(Boolean).join('/')
+  const destRoot = props.resource === 'fs' ? [] : [props.tag]
+  const destPath = [...destRoot, ...moveBrowsePath.value, movingEntry.value].filter(Boolean).join('/')
   try {
     await moveFile(props.resource, fromSegments, destPath)
     cancelMove()
@@ -389,7 +415,8 @@ async function confirmRename() {
   if (!renamingEntry.value || !renameValue.value.trim()) return
   if (renameValue.value.trim() === renamingEntry.value) { cancelRename(); return }
   const fromSegments = [...apiSegments.value, renamingEntry.value]
-  const destPath = [props.tag, ...subpath.value, renameValue.value.trim()].filter(Boolean).join('/')
+  const destRoot = props.resource === 'fs' ? [] : [props.tag]
+  const destPath = [...destRoot, ...subpath.value, renameValue.value.trim()].filter(Boolean).join('/')
   try {
     await moveFile(props.resource, fromSegments, destPath)
     cancelRename()
@@ -454,7 +481,7 @@ onMounted(load)
         <h1 class="text-2xl font-bold tracking-tight truncate">{{ title }}</h1>
         <!-- Breadcrumbs -->
         <div v-if="breadcrumbs.length" class="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-          <button class="hover:text-foreground" @click="navigateTo([])">/{{ resourceLabel }}{{ props.tag ? `/${props.tag}` : '' }}</button>
+          <button class="hover:text-foreground" @click="navigateTo([])">/{{ resourceLabel }}{{ props.tag && props.resource !== 'fs' ? `/${props.tag}` : '' }}</button>
           <template v-for="(crumb, i) in breadcrumbs" :key="i">
             <span>/</span>
             <button
@@ -603,6 +630,15 @@ onMounted(load)
         <span class="flex-1 truncate text-sm">{{ entry.name }}</span>
         <span class="text-xs text-muted-foreground tabular-nums">{{ formatSize(entry.size) }}</span>
         <button
+          v-if="props.resource === 'fs' && entry.type === 'file'"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          :disabled="downloading === entry.name"
+          @click.stop="handleDownload(entry.name)"
+        >
+          <Loader2 v-if="downloading === entry.name" class="h-3.5 w-3.5 animate-spin" />
+          <Download v-else class="h-3.5 w-3.5" />
+        </button>
+        <button
           class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
           @click.stop="startRename(entry.name)"
         >
@@ -618,7 +654,7 @@ onMounted(load)
         <button
           class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
           :disabled="deleting === entry.name"
-          @click.stop="handleDelete(entry.name)"
+          @click.stop="handleDelete(entry)"
         >
           <Trash2 class="h-3.5 w-3.5" />
         </button>
@@ -651,7 +687,7 @@ onMounted(load)
 
       <!-- Current path display -->
       <div class="flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
-        <button class="hover:text-foreground font-medium" @click="moveBrowseToRoot">/{{ resourceLabel }}{{ props.tag ? `/${props.tag}` : '' }}</button>
+        <button class="hover:text-foreground font-medium" @click="moveBrowseToRoot">/{{ resourceLabel }}{{ props.tag && props.resource !== 'fs' ? `/${props.tag}` : '' }}</button>
         <template v-for="(seg, i) in moveBrowsePath" :key="i">
           <ChevronRight class="h-3.5 w-3.5 shrink-0" />
           <button

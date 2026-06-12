@@ -370,6 +370,10 @@ export async function getArtworkBlob(tag: string, name: string): Promise<string 
   return URL.createObjectURL(blob)
 }
 
+export async function downloadToDisk(resource: string, segments: string[], filename: string): Promise<void> {
+  await downloadFile(buildPath(resource, ...segments), filename)
+}
+
 export async function downloadFile(path: string, filename: string): Promise<void> {
   const res = await request(path)
   if (!res.ok) throw new Error(`download ${res.status}`)
@@ -401,6 +405,37 @@ export interface SlotList {
 export async function deleteFile(resource: string, ...subpath: (string | undefined)[]): Promise<{ ok: boolean }> {
   const path = buildPath(resource, ...subpath)
   const res = await request(path, { method: 'DELETE' })
+  return res.json()
+}
+
+export interface Volume {
+  id: string
+  label: string
+  totalBytes: number
+  freeBytes: number
+}
+
+export async function listVolumes(): Promise<Volume[]> {
+  const res = await request('/api/fs')
+  const data = await res.json()
+  return data.volumes
+}
+
+export interface ApkStatus {
+  status: 'pending_user' | 'success' | 'failure'
+  message?: string
+}
+
+export function uploadApk(
+  file: File,
+  onProgress?: (pct: number) => void,
+): { promise: Promise<{ ok: boolean; installId: string }>; abort: () => void } {
+  const { promise, abort } = uploadFiles('apk', [], [file], onProgress)
+  return { promise: promise as unknown as Promise<{ ok: boolean; installId: string }>, abort }
+}
+
+export async function getApkStatus(installId: string): Promise<ApkStatus> {
+  const res = await request(`/api/apk/${encodeURIComponent(installId)}`)
   return res.json()
 }
 

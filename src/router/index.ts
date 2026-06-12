@@ -4,12 +4,16 @@ import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import PlatformView from '@/views/PlatformView.vue'
 import BrowseView from '@/views/BrowseView.vue'
+import FileManagerView from '@/views/FileManagerView.vue'
+import ApkInstallerView from '@/views/ApkInstallerView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'login', component: LoginView },
     { path: '/dashboard/:tab?', name: 'dashboard', component: DashboardView, props: true },
+    { path: '/tools/files', name: 'tools-files', component: FileManagerView },
+    { path: '/tools/apk', name: 'tools-apk', component: ApkInstallerView },
     { path: '/platform/:tag', name: 'platform', component: PlatformView, props: true },
     {
       path: '/platform/:tag/folder/:folder(.*)',
