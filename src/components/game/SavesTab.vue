@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { listGameSaves, downloadGameSave, uploadGameSave, deleteGameSave, type GameFile } from '@/api/client'
 import { confirm } from '@/lib/confirm'
+import { formatSize, formatRelativeTime as formatWhen } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import { Save, Upload, Download, Trash2 } from 'lucide-vue-next'
 
@@ -11,26 +12,6 @@ const entries = ref<GameFile[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const busy = ref(false)
-
-function formatSize(n: number) {
-  if (n <= 0) return ''
-  const units = ['B', 'KB', 'MB', 'GB']
-  let v = n
-  let u = 0
-  while (v >= 1024 && u < units.length - 1) { v /= 1024; u++ }
-  return `${v.toFixed(v >= 10 || u === 0 ? 0 : 1)} ${units[u]}`
-}
-
-function formatWhen(ms: number) {
-  if (ms <= 0) return ''
-  const diff = Date.now() - ms
-  const min = Math.floor(diff / 60000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  return `${Math.floor(hr / 24)}d ago`
-}
 
 async function load() {
   loading.value = true
@@ -100,9 +81,10 @@ onMounted(load)
       </Button>
     </div>
 
-    <p v-if="loading" class="text-base text-foreground/75">Loading...</p>
-    <div v-else-if="error" class="text-base text-destructive">
-      {{ error }} <button class="underline" @click="load">retry</button>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
+    <div v-else-if="error" class="py-8 text-center space-y-2">
+      <p class="text-destructive">{{ error }}</p>
+      <Button variant="outline" size="sm" @click="load">Retry</Button>
     </div>
     <p v-else-if="!entries.length" class="text-base text-foreground/75">No saves yet.</p>
 
@@ -131,7 +113,7 @@ onMounted(load)
             <Download class="h-4 w-4" />
           </button>
           <button
-            class="p-2 rounded text-foreground/70 hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
+            class="p-2 rounded text-foreground/70 hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
             :disabled="busy"
             title="Delete"
             @click="onDelete(f)"

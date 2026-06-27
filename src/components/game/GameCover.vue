@@ -8,16 +8,20 @@ const props = defineProps<{ tag: string; game: GameRow }>()
 const artSrc = ref<string | null>(null)
 const bg = computed(() => coverColor(props.game.displayName))
 
+function setArt(url: string | null) {
+  if (artSrc.value) URL.revokeObjectURL(artSrc.value)
+  artSrc.value = url
+}
+
 async function loadArt() {
   if (!props.game.hasArt) {
-    artSrc.value = null
+    setArt(null)
     return
   }
   try {
-    const url = await gameArtBlob(props.tag, props.game.id)
-    if (url) artSrc.value = url
+    setArt(await gameArtBlob(props.tag, props.game.id))
   } catch {
-    artSrc.value = null
+    setArt(null)
   }
 }
 

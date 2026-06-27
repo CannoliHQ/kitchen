@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, downloadToDisk, type FileEntry } from '@/api/client'
 import { confirm } from '@/lib/confirm'
+import { formatSize, stripExtension, fileExt } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
@@ -89,17 +90,6 @@ const breadcrumbs = computed(() => {
 /** True when uploads should prompt for a game name to rename the file */
 const needsGameRename = computed(() => ['saves', 'art'].includes(props.resource) && !!props.tag)
 
-function stripExtension(name: string): string {
-  const i = name.lastIndexOf('.')
-  return i > 0 ? name.substring(0, i) : name
-}
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return ''
-  const units = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`
-}
 
 const filteredGamePickerRoms = computed(() => {
   const q = gamePickerSearch.value.toLowerCase()
@@ -244,7 +234,7 @@ const crumbs = computed<Crumb[]>(() => {
 // --- File preview ---
 const PREVIEWABLE = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'txt', 'md', 'markdown', 'log', 'nfo', 'json', 'csv', 'cfg', 'ini']
 function isPreviewable(name: string): boolean {
-  return PREVIEWABLE.includes(name.slice(name.lastIndexOf('.') + 1).toLowerCase())
+  return PREVIEWABLE.includes(fileExt(name))
 }
 
 function openView(name: string) {

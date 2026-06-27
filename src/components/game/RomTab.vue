@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { listGameRoms, downloadGameRomFile, type GameRomFile } from '@/api/client'
+import { formatSize } from '@/lib/format'
+import Button from '@/components/ui/Button.vue'
 import { Gamepad2, Download } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; id: number }>()
@@ -8,15 +10,6 @@ const props = defineProps<{ tag: string; id: number }>()
 const files = ref<GameRomFile[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-
-function formatSize(n: number) {
-  if (n <= 0) return '-'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let v = n
-  let u = 0
-  while (v >= 1024 && u < units.length - 1) { v /= 1024; u++ }
-  return `${v.toFixed(v >= 10 || u === 0 ? 0 : 1)} ${units[u]}`
-}
 
 async function load() {
   loading.value = true
@@ -45,9 +38,10 @@ onMounted(load)
       ROM file{{ files.length === 1 ? '' : 's' }} ({{ files.length }})
     </div>
 
-    <p v-if="loading" class="text-base text-foreground/75">Loading...</p>
-    <div v-else-if="error" class="text-base text-destructive">
-      {{ error }} <button class="underline" @click="load">retry</button>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
+    <div v-else-if="error" class="py-8 text-center space-y-2">
+      <p class="text-destructive">{{ error }}</p>
+      <Button variant="outline" size="sm" @click="load">Retry</Button>
     </div>
     <p v-else-if="!files.length" class="text-base text-foreground/75">No ROM files.</p>
 
@@ -62,7 +56,7 @@ onMounted(load)
         </div>
         <div class="flex-1 min-w-0">
           <div class="text-base font-semibold text-foreground truncate">{{ f.name }}</div>
-          <div class="text-sm text-foreground/60">{{ formatSize(f.size) }}</div>
+          <div class="text-sm text-foreground/60">{{ formatSize(f.size) || '-' }}</div>
         </div>
         <button
           class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground shrink-0"

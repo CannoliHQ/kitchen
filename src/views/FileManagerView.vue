@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { listVolumes, type Volume } from '@/api/client'
+import { formatSize } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import { ArrowLeft } from 'lucide-vue-next'
@@ -24,12 +25,6 @@ function openVolume(v: Volume) {
     params: { resource: 'fs', tag: v.id },
     query: { label: v.label },
   })
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`
-  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
-  return `${Math.round(bytes / 1024)} KB`
 }
 
 function usedPct(v: Volume): number {
@@ -58,7 +53,7 @@ function usedPct(v: Volume): number {
       >
         <h3 class="text-base font-semibold">{{ v.label }}</h3>
         <p class="mt-1 text-sm text-muted-foreground">
-          {{ formatBytes(v.freeBytes) }} free of {{ formatBytes(v.totalBytes) }}
+          {{ formatSize(v.freeBytes) }} free of {{ formatSize(v.totalBytes) }}
         </p>
         <div class="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
           <div class="h-full bg-accent" :style="{ width: `${usedPct(v)}%` }" />

@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { setCredentials, setBaseUrlOnly, getInfo, clearCredentials, getAuthStatus } from '@/api/client'
+import { setCredentials, setBaseUrlOnly, getInfo, clearCredentials, getAuthStatus, DEFAULT_PORT } from '@/api/client'
 import Card from '@/components/ui/Card.vue'
 
 const router = useRouter()
 const route = useRoute()
-
-const DEFAULT_PORT = '1091'
 
 const redirectTarget = (() => {
   const r = route.query.redirect

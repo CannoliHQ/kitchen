@@ -21,6 +21,7 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const blobUrl = ref<string | null>(null)
 const contentType = ref('')
+const downloadError = ref('')
 
 const pathSegs = computed(() => (props.path ? props.path.split('/').filter(Boolean) : []))
 const segments = computed(() => [props.tag, ...pathSegs.value, props.name].filter(Boolean) as string[])
@@ -49,6 +50,11 @@ async function load() {
   loading.value = true
   error.value = null
   if (blobUrl.value) { URL.revokeObjectURL(blobUrl.value); blobUrl.value = null }
+  if (!props.resource || !props.name) {
+    error.value = 'Nothing to preview.'
+    loading.value = false
+    return
+  }
   try {
     const { url, type } = await fileBlob(props.resource, ...segments.value)
     blobUrl.value = url
@@ -60,8 +66,13 @@ async function load() {
   }
 }
 
-function onDownload() {
-  downloadToDisk(props.resource, segments.value, props.name).catch(() => {})
+async function onDownload() {
+  downloadError.value = ''
+  try {
+    await downloadToDisk(props.resource, segments.value, props.name)
+  } catch {
+    downloadError.value = 'Download failed.'
+  }
 }
 
 onMounted(load)
@@ -75,9 +86,12 @@ onBeforeUnmount(() => { if (blobUrl.value) URL.revokeObjectURL(blobUrl.value) })
 
     <div class="flex items-center justify-between gap-3">
       <Breadcrumbs :items="crumbs" />
-      <Button variant="outline" size="sm" class="shrink-0" @click="onDownload">
-        <Download class="h-4 w-4 mr-1.5" /> Download
-      </Button>
+      <div class="flex items-center gap-2 shrink-0">
+        <span v-if="downloadError" class="text-xs text-destructive">{{ downloadError }}</span>
+        <Button variant="outline" size="sm" @click="onDownload">
+          <Download class="h-4 w-4 mr-1.5" /> Download
+        </Button>
+      </div>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center gap-2 py-16 text-muted-foreground">

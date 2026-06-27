@@ -65,10 +65,10 @@ watch(() => props.url, prepare)
     <p v-if="rendering" class="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
       <Loader2 class="h-4 w-4 animate-spin" /> Rendering...
     </p>
-    <div ref="pdfContainer" class="rounded-xl bg-[#0e0e10] border border-border p-4" />
+    <div ref="pdfContainer" class="rounded-xl bg-surface-sunken border border-border p-4" />
   </div>
 
-  <div v-else-if="kind === 'image'" class="rounded-xl bg-[#0e0e10] border border-border p-4">
+  <div v-else-if="kind === 'image'" class="rounded-xl bg-surface-sunken border border-border p-4">
     <img :src="url" :alt="name" class="mx-auto max-w-full h-auto rounded" />
   </div>
 

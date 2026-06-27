@@ -26,10 +26,17 @@ export function setConnectionErrorHandler(handler: () => void) {
   onConnectionError = handler
 }
 
-export function setCredentials(host: string, pin: string) {
+export const DEFAULT_PORT = '1091'
+
+/** Strip any scheme/trailing slash, ensure a port, and return an http base URL. */
+function normalizeBaseUrl(host: string): string {
   const bare = host.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const withPort = bare.includes(':') ? bare : `${bare}:1091`
-  baseUrl.value = `http://${withPort}`
+  const withPort = bare.includes(':') ? bare : `${bare}:${DEFAULT_PORT}`
+  return `http://${withPort}`
+}
+
+export function setCredentials(host: string, pin: string) {
+  baseUrl.value = normalizeBaseUrl(host)
   token.value = pin ? btoa(`nonna:${pin}`) : ''
   localStorage.setItem('cannoli_host', host)
   if (pin) localStorage.setItem('cannoli_pin', pin)
@@ -37,9 +44,7 @@ export function setCredentials(host: string, pin: string) {
 }
 
 export function setBaseUrlOnly(host: string) {
-  const bare = host.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  const withPort = bare.includes(':') ? bare : `${bare}:1091`
-  baseUrl.value = `http://${withPort}`
+  baseUrl.value = normalizeBaseUrl(host)
   token.value = ''
   localStorage.setItem('cannoli_host', host)
   localStorage.removeItem('cannoli_pin')
@@ -60,9 +65,7 @@ export interface AuthStatus {
 }
 
 export async function getAuthStatus(host?: string): Promise<AuthStatus> {
-  const target = host
-    ? `http://${host.replace(/^https?:\/\//, '').replace(/\/$/, '')}`
-    : baseUrl.value
+  const target = host ? normalizeBaseUrl(host) : baseUrl.value
   if (!target) throw new Error('ConnectionError')
   const res = await fetch(`${target}/api/auth`, { method: 'GET' })
   if (!res.ok) throw new Error('ConnectionError')
@@ -243,11 +246,6 @@ export async function renameGame(tag: string, id: number, name: string): Promise
   if (!res.ok) throw new Error(`renameGame ${res.status}`)
 }
 
-export async function rescanPlatform(tag: string): Promise<void> {
-  const res = await request(`/api/scan/${encodeURIComponent(tag)}`, { method: 'POST' })
-  if (!res.ok) throw new Error(`rescanPlatform ${res.status}`)
-}
-
 export async function listGameSaves(tag: string, id: number): Promise<GameFile[]> {
   const res = await request(`${gameBase(tag, id)}/saves`)
   if (!res.ok) throw new Error(`listGameSaves ${res.status}`)
@@ -362,28 +360,6 @@ export async function moveFile(resource: string, fromSegments: string[], to: str
     body: JSON.stringify({ to }),
   })
   return res.json()
-}
-
-export interface ArtEntry {
-  name: string
-  file: string
-  size: number
-}
-
-export async function getArtworkIndex(tag: string): Promise<ArtEntry[]> {
-  const path = `/api/artwork/${encodeURIComponent(tag)}`
-  const res = await request(path)
-  if (!res.ok) return []
-  const data = await res.json()
-  return data.art ?? []
-}
-
-export async function getArtworkBlob(tag: string, name: string): Promise<string | null> {
-  const path = `/api/artwork/${encodeURIComponent(tag)}/${encodeURIComponent(name)}`
-  const res = await request(path)
-  if (!res.ok) return null
-  const blob = await res.blob()
-  return URL.createObjectURL(blob)
 }
 
 export async function downloadToDisk(resource: string, segments: string[], filename: string): Promise<void> {

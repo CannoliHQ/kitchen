@@ -108,7 +108,7 @@ const columns: { key: string; label: string; align: string }[] = [
           </td>
           <td class="px-3 py-2.5 font-semibold text-foreground">
             <span class="inline-flex items-center gap-2">
-              <Folder class="h-4 w-4 text-amber-500/70 shrink-0" />
+              <Folder class="h-4 w-4 text-accent/70 shrink-0" />
               {{ folderLeaf(folder) }}
             </span>
           </td>

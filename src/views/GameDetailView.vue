@@ -13,7 +13,7 @@ import MoveDialog from '@/components/file/MoveDialog.vue'
 import RenameDialog from '@/components/file/RenameDialog.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
-import { ImagePlus, Upload, Trash2, FolderInput, Pencil } from 'lucide-vue-next'
+import { ImagePlus, ImageOff, Trash2, MoveRight, Pencil } from 'lucide-vue-next'
 import RomTab from '@/components/game/RomTab.vue'
 import SavesTab from '@/components/game/SavesTab.vue'
 import StatesTab from '@/components/game/StatesTab.vue'
@@ -191,11 +191,20 @@ async function openMove() {
   showMove.value = true
 }
 
-const actionItems: DropdownItem[] = [
-  { label: 'Move', icon: FolderInput, onSelect: openMove },
-  { label: 'Rename', icon: Pencil, onSelect: () => { showRename.value = true } },
-  { label: 'Delete', icon: Trash2, danger: true, onSelect: () => { purge.value = false; showDelete.value = true } },
-]
+const actionItems = computed<DropdownItem[]>(() => {
+  const items: DropdownItem[] = [
+    { label: 'Move', icon: MoveRight, onSelect: openMove },
+    { label: 'Rename', icon: Pencil, onSelect: () => { showRename.value = true } },
+  ]
+  if (game.value?.hasArt) {
+    items.push(
+      { label: 'Replace art', icon: ImagePlus, onSelect: onUploadArt },
+      { label: 'Remove art', icon: ImageOff, danger: true, onSelect: onDeleteArt },
+    )
+  }
+  items.push({ label: 'Delete', icon: Trash2, danger: true, onSelect: () => { purge.value = false; showDelete.value = true } })
+  return items
+})
 
 async function onMoveGame(target: string) {
   try {
@@ -252,30 +261,12 @@ onBeforeUnmount(() => {
         </template>
         <div class="relative p-5">
           <div class="flex items-end gap-5">
-            <div v-if="artSrc" class="relative group shrink-0">
+            <div v-if="artSrc" class="shrink-0">
               <img
                 :src="artSrc"
                 :alt="game.displayName"
                 class="h-40 w-auto rounded-lg shadow-xl shadow-black/40"
               />
-              <div
-                class="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"
-              >
-                <button
-                  class="flex items-center gap-1.5 text-sm font-semibold text-white disabled:opacity-50"
-                  :disabled="artBusy"
-                  @click="onUploadArt"
-                >
-                  <Upload class="h-4 w-4" /> Replace
-                </button>
-                <button
-                  class="flex items-center gap-1.5 text-sm font-semibold text-white disabled:opacity-50"
-                  :disabled="artBusy"
-                  @click="onDeleteArt"
-                >
-                  <Trash2 class="h-4 w-4" /> Delete
-                </button>
-              </div>
             </div>
             <button
               v-else
@@ -310,8 +301,8 @@ onBeforeUnmount(() => {
         <button
           v-for="t in tabs"
           :key="t.key"
-          class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap"
-          :class="activeTab === t.key ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+          class="first:pl-0 px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px whitespace-nowrap"
+          :class="activeTab === t.key ? 'border-accent text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'"
           :aria-current="activeTab === t.key ? 'page' : undefined"
           @click="selectTab(t.key)"
         >

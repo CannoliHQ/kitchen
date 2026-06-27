@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { listFiles, deleteFile, uploadFiles, resourceFileBlob, type FileEntry } from '@/api/client'
+import { formatSize } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import Progress from '@/components/ui/Progress.vue'
 import { Check, File as FileIcon, LayoutGrid, Table as TableIcon, Trash2, Upload } from 'lucide-vue-next'
@@ -28,13 +29,6 @@ watch(() => props.display, d => { if (d) viewMode.value = d })
 const emptyMessage = computed(() =>
   props.emptyLabel ?? (props.resource === 'overlays' ? 'No overlays yet.' : 'No BIOS files yet.'),
 )
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return ''
-  const units = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`
-}
 
 function clearThumbnails() {
   for (const url of thumbnails.values()) URL.revokeObjectURL(url)
@@ -268,7 +262,7 @@ onBeforeUnmount(() => {
             <Check class="h-3 w-3 text-white" />
           </div>
           <button
-            class="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive disabled:opacity-50"
+            class="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded bg-black/60 text-white transition-colors hover:bg-destructive disabled:opacity-50"
             :disabled="deleting"
             title="Delete"
             @click.stop="deleteOne(entry.name)"

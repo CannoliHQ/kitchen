@@ -168,8 +168,8 @@ const actionItems = computed<DropdownItem[]>(() => {
       <button
         v-for="t in tabs"
         :key="t.key"
-        class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap"
-        :class="activeTab === t.key ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        class="first:pl-0 px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px whitespace-nowrap"
+        :class="activeTab === t.key ? 'border-accent text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'"
         :aria-current="activeTab === t.key ? 'page' : undefined"
         @click="selectTab(t.key)"
       >

@@ -63,31 +63,31 @@ function browseFlat(resource: string) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1600px] p-6 pb-0 space-y-8 min-h-screen flex flex-col">
+  <div class="mx-auto max-w-[1600px] p-6 pb-0 space-y-6 min-h-screen flex flex-col">
     <!-- Header -->
     <AppHeader />
 
     <!-- Nav tabs -->
     <div class="flex items-center gap-1 border-b border-border">
       <button
-        class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px"
-        :class="activeTab === 'content' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        class="pl-0 pr-4 py-1.5 text-lg transition-colors border-b-2 -mb-px"
+        :class="activeTab === 'content' ? 'border-accent text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'"
         :aria-current="activeTab === 'content' ? 'page' : undefined"
         @click="selectTab('content')"
       >
         Platforms
       </button>
       <button
-        class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px"
-        :class="activeTab === 'customization' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        class="px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px"
+        :class="activeTab === 'customization' ? 'border-accent text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'"
         :aria-current="activeTab === 'customization' ? 'page' : undefined"
         @click="selectTab('customization')"
       >
         Customization
       </button>
       <button
-        class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px"
-        :class="activeTab === 'tools' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        class="px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px"
+        :class="activeTab === 'tools' ? 'border-accent text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'"
         :aria-current="activeTab === 'tools' ? 'page' : undefined"
         @click="selectTab('tools')"
       >
@@ -206,18 +206,14 @@ function browseFlat(resource: string) {
           </button>
           <button
             type="button"
-            disabled
-            aria-disabled="true"
-            class="text-left rounded-xl border border-border bg-card p-5 opacity-50 cursor-not-allowed"
+            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            @click="browseFlat('shaders')"
           >
             <div class="flex items-center gap-3">
               <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
                 <Palette class="h-5 w-5 text-accent" />
               </div>
-              <div class="flex flex-col">
-                <span class="font-semibold">Shaders</span>
-                <span class="text-xs text-muted-foreground">Coming Soon ™</span>
-              </div>
+              <span class="font-semibold">Shaders</span>
             </div>
           </button>
           <button
