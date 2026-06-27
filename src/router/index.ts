@@ -56,6 +56,7 @@ const router = createRouter({
     },
     { path: '/browse/:resource/:tag', name: 'browse', component: BrowseView, props: true },
     { path: '/browse/:resource', name: 'browse-flat', component: BrowseView, props: true },
+    { path: '/view', name: 'file-view', component: () => import('@/views/FileViewer.vue'), props: route => ({ ...route.query }) },
     { path: '/:pathMatch(.*)*', name: 'not-found', redirect: { name: 'dashboard' } },
   ],
 })

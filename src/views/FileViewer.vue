@@ -1,52 +1,71 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { gameGuideBlob, getGame, downloadGameGuide, type GameDetail } from '@/api/client'
-import { platformName } from '@/api/platforms'
+import type { RouteLocationRaw } from 'vue-router'
+import { fileBlob, downloadToDisk } from '@/api/client'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
 import FilePreview from '@/components/FilePreview.vue'
 import Button from '@/components/ui/Button.vue'
 import { Download, Loader2 } from 'lucide-vue-next'
 
-const props = defineProps<{ tag: string; id: string; file: string }>()
+const props = defineProps<{
+  resource: string
+  tag?: string
+  path?: string
+  name: string
+  label?: string
+  rlabel?: string
+}>()
 
-const gameId = computed(() => Number(props.id))
-const game = ref<GameDetail | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const blobUrl = ref<string | null>(null)
 const contentType = ref('')
 
-const crumbs = computed<Crumb[]>(() => [
-  { label: 'Platforms', to: { name: 'dashboard' } },
-  { label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag } } },
-  { label: game.value?.displayName ?? 'Game', to: { name: 'game', params: { tag: props.tag, id: props.id, tab: 'guides' } } },
-  { label: props.file },
-])
+const pathSegs = computed(() => (props.path ? props.path.split('/').filter(Boolean) : []))
+const segments = computed(() => [props.tag, ...pathSegs.value, props.name].filter(Boolean) as string[])
+
+function listRoute(segs: string[]): RouteLocationRaw {
+  const query: Record<string, string> = {}
+  if (props.label) query.label = props.label
+  if (segs.length) query.path = segs.join('/')
+  return {
+    name: props.tag ? 'browse' : 'browse-flat',
+    params: props.tag ? { resource: props.resource, tag: props.tag } : { resource: props.resource },
+    query: Object.keys(query).length ? query : undefined,
+  }
+}
+
+const crumbs = computed<Crumb[]>(() => {
+  const items: Crumb[] = [{ label: props.rlabel || props.resource, to: listRoute([]) }]
+  pathSegs.value.forEach((seg, i) => {
+    items.push({ label: seg, to: listRoute(pathSegs.value.slice(0, i + 1)) })
+  })
+  items.push({ label: props.name })
+  return items
+})
 
 async function load() {
   loading.value = true
   error.value = null
   if (blobUrl.value) { URL.revokeObjectURL(blobUrl.value); blobUrl.value = null }
-  // Best-effort game name for the breadcrumb; never blocks the viewer.
-  getGame(props.tag, gameId.value).then(g => { game.value = g }).catch(() => {})
   try {
-    const { url, type } = await gameGuideBlob(props.tag, gameId.value, props.file)
+    const { url, type } = await fileBlob(props.resource, ...segments.value)
     blobUrl.value = url
     contentType.value = type
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load guide'
+    error.value = e instanceof Error ? e.message : 'Failed to load file'
   } finally {
     loading.value = false
   }
 }
 
 function onDownload() {
-  downloadGameGuide(props.tag, gameId.value, props.file).catch(() => {})
+  downloadToDisk(props.resource, segments.value, props.name).catch(() => {})
 }
 
 onMounted(load)
-watch(() => props.file, load)
+watch(() => [props.resource, props.tag, props.path, props.name], load)
 onBeforeUnmount(() => { if (blobUrl.value) URL.revokeObjectURL(blobUrl.value) })
 </script>
 
@@ -62,7 +81,7 @@ onBeforeUnmount(() => { if (blobUrl.value) URL.revokeObjectURL(blobUrl.value) })
     </div>
 
     <div v-if="loading" class="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-      <Loader2 class="h-5 w-5 animate-spin" /> Loading guide...
+      <Loader2 class="h-5 w-5 animate-spin" /> Loading file...
     </div>
 
     <div v-else-if="error" class="py-16 text-center space-y-3">
@@ -73,6 +92,6 @@ onBeforeUnmount(() => { if (blobUrl.value) URL.revokeObjectURL(blobUrl.value) })
       </div>
     </div>
 
-    <FilePreview v-else-if="blobUrl" :url="blobUrl" :type="contentType" :name="props.file" />
+    <FilePreview v-else-if="blobUrl" :url="blobUrl" :type="contentType" :name="props.name" />
   </div>
 </template>

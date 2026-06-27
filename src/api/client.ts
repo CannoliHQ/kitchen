@@ -197,6 +197,14 @@ export async function resourceFileBlob(resource: string, tag: string, name: stri
   return URL.createObjectURL(await res.blob())
 }
 
+/** Fetch any browse-resource file as an authenticated blob. Caller must revoke the url. */
+export async function fileBlob(resource: string, ...segments: string[]): Promise<{ url: string; type: string }> {
+  const res = await request(buildPath(resource, ...segments))
+  if (!res.ok) throw new Error(`fileBlob ${res.status}`)
+  const blob = await res.blob()
+  return { url: URL.createObjectURL(blob), type: blob.type }
+}
+
 export async function uploadGameArt(tag: string, id: number, file: File): Promise<void> {
   const res = await request(`${gameBase(tag, id)}/art?name=${encodeURIComponent(file.name)}`, {
     method: 'POST',

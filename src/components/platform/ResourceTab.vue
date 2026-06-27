@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
         <span class="flex-1 truncate text-sm">{{ entry.name }}</span>
         <span class="text-xs text-muted-foreground tabular-nums">{{ formatSize(entry.size) }}</span>
         <button
-          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
           :disabled="deleting"
           title="Delete"
           @click.stop="deleteOne(entry.name)"

@@ -73,7 +73,7 @@ onUnmounted(() => {
 
       <div
         v-if="open"
-        class="absolute left-0 top-full mt-1 z-50 min-w-40 rounded-lg border border-border bg-card shadow-lg py-1"
+        class="absolute right-0 top-full mt-1 z-50 min-w-40 rounded-lg border border-border bg-card shadow-lg py-1"
       >
         <button
           v-for="item in items"

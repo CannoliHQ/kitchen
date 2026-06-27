@@ -8,7 +8,7 @@ import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2, Download } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2, Download, Eye } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -229,16 +229,37 @@ function navigateTo(pathSegments: string[]) {
   router.push(routeFor(pathSegments))
 }
 
+const rootLabel = computed(() => props.resource === 'fs'
+  ? resourceLabel.value
+  : `/${resourceLabel.value}${props.tag ? `/${props.tag}` : ''}`)
+
 const crumbs = computed<Crumb[]>(() => {
-  const root = props.resource === 'fs'
-    ? resourceLabel.value
-    : `/${resourceLabel.value}${props.tag ? `/${props.tag}` : ''}`
-  const items: Crumb[] = [{ label: root, to: routeFor([]) }]
+  const items: Crumb[] = [{ label: rootLabel.value, to: routeFor([]) }]
   breadcrumbs.value.forEach((c, i) => {
     items.push({ label: c.label, to: i < breadcrumbs.value.length - 1 ? routeFor(c.path) : undefined })
   })
   return items
 })
+
+// --- File preview ---
+const PREVIEWABLE = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'txt', 'md', 'markdown', 'log', 'nfo', 'json', 'csv', 'cfg', 'ini']
+function isPreviewable(name: string): boolean {
+  return PREVIEWABLE.includes(name.slice(name.lastIndexOf('.') + 1).toLowerCase())
+}
+
+function openView(name: string) {
+  router.push({
+    name: 'file-view',
+    query: {
+      resource: props.resource,
+      ...(props.tag ? { tag: props.tag } : {}),
+      ...(subpath.value.length ? { path: subpath.value.join('/') } : {}),
+      name,
+      ...(route.query.label ? { label: route.query.label as string } : {}),
+      rlabel: rootLabel.value,
+    },
+  })
+}
 
 function openFolder(name: string) {
   navigateTo([...subpath.value, name])
@@ -624,8 +645,17 @@ onMounted(load)
         <span class="flex-1 truncate text-sm">{{ entry.name }}</span>
         <span class="text-xs text-muted-foreground tabular-nums">{{ formatSize(entry.size) }}</span>
         <button
+          v-if="entry.type === 'file' && isPreviewable(entry.name)"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 transition-colors"
+          title="View"
+          @click.stop="openView(entry.name)"
+        >
+          <Eye class="h-3.5 w-3.5" />
+        </button>
+        <button
           v-if="props.resource === 'fs' && entry.type === 'file'"
-          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 transition-colors"
+          title="Download"
           :disabled="downloading === entry.name"
           @click.stop="handleDownload(entry.name)"
         >
@@ -633,20 +663,23 @@ onMounted(load)
           <Download v-else class="h-3.5 w-3.5" />
         </button>
         <button
-          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 transition-colors"
+          title="Rename"
           @click.stop="startRename(entry.name)"
         >
           <Pencil class="h-3.5 w-3.5" />
         </button>
         <button
           v-if="props.resource !== 'wallpapers'"
-          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 transition-colors"
+          title="Move"
           @click.stop="startMove(entry.name)"
         >
           <MoveRight class="h-3.5 w-3.5" />
         </button>
         <button
-          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          title="Delete"
           :disabled="deleting === entry.name"
           @click.stop="handleDelete(entry)"
         >
