@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { listFiles, deleteFile, uploadFiles, resourceFileBlob, type FileEntry } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
 import Progress from '@/components/ui/Progress.vue'
 import { Check, File as FileIcon, LayoutGrid, Table as TableIcon, Trash2, Upload } from 'lucide-vue-next'
 
-const props = defineProps<{ tag: string; resource: 'overlays' | 'bios'; display?: 'list' | 'images' }>()
+const props = defineProps<{ tag: string; resource: 'overlays' | 'bios'; display?: 'list' | 'images'; subPath?: string[]; emptyLabel?: string }>()
 
 const entries = ref<FileEntry[]>([])
 const loading = ref(true)
@@ -24,6 +24,10 @@ const thumbnails = reactive(new Map<string, string>())
 
 const viewMode = ref<'list' | 'images'>(props.display ?? 'list')
 watch(() => props.display, d => { if (d) viewMode.value = d })
+
+const emptyMessage = computed(() =>
+  props.emptyLabel ?? (props.resource === 'overlays' ? 'No overlays yet.' : 'No BIOS files yet.'),
+)
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return ''
@@ -51,7 +55,7 @@ async function load() {
   clearThumbnails()
   selected.clear()
   try {
-    const res = await listFiles(props.resource, props.tag)
+    const res = await listFiles(props.resource, props.tag, ...(props.subPath ?? []))
     entries.value = (res.entries ?? []).filter(e => e.type === 'file')
     if (props.display === 'images' || viewMode.value === 'images') await loadThumbnails()
   } catch (e: unknown) {
@@ -70,7 +74,7 @@ async function deleteSelected() {
   if (!selected.size) return
   deleting.value = true
   try {
-    for (const name of [...selected]) await deleteFile(props.resource, props.tag, name)
+    for (const name of [...selected]) await deleteFile(props.resource, props.tag, ...(props.subPath ?? []), name)
     await load()
   } catch {
     error.value = 'Delete failed'
@@ -82,7 +86,7 @@ async function deleteSelected() {
 async function deleteOne(name: string) {
   deleting.value = true
   try {
-    await deleteFile(props.resource, props.tag, name)
+    await deleteFile(props.resource, props.tag, ...(props.subPath ?? []), name)
     await load()
   } catch {
     error.value = 'Delete failed'
@@ -107,7 +111,7 @@ async function doUpload(files: File[]) {
       uploadCurrent.value = i + 1
       uploadName.value = file.name
       uploadProgress.value = 0
-      const { promise } = uploadFiles(props.resource, [props.tag], [file], pct => { uploadProgress.value = pct })
+      const { promise } = uploadFiles(props.resource, [props.tag, ...(props.subPath ?? [])], [file], pct => { uploadProgress.value = pct })
       await promise
     }
     await load()
@@ -154,7 +158,7 @@ function onWindowDrop(e: DragEvent) {
   doUpload(Array.from(e.dataTransfer?.files ?? []))
 }
 
-watch(() => [props.tag, props.resource], load)
+watch(() => [props.tag, props.resource, (props.subPath ?? []).join('/')], load)
 onMounted(() => {
   load()
   window.addEventListener('dragenter', onWindowDragEnter)
@@ -232,7 +236,7 @@ onBeforeUnmount(() => {
       <Button variant="outline" size="sm" @click="load">Retry</Button>
     </div>
     <p v-else-if="!entries.length" class="text-base text-foreground/75 py-8 text-center">
-      {{ resource === 'overlays' ? 'No overlays yet.' : 'No BIOS files yet.' }}
+      {{ emptyMessage }}
     </p>
 
     <div
