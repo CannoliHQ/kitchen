@@ -2,11 +2,12 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, downloadToDisk, type FileEntry } from '@/api/client'
-import { platformName } from '@/api/platforms'
 import { confirm } from '@/lib/confirm'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
 import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2, Download } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -74,16 +75,6 @@ const resourceLabel = computed(() => {
     guides: 'Guides', overlays: 'Overlays', shaders: 'Shaders',
   }
   return labels[props.resource] ?? props.resource
-})
-
-const title = computed(() => {
-  if (props.resource === 'fs') {
-    return (route.query.label as string) || props.tag || 'Files'
-  }
-  if ((props.resource === 'guides' || props.resource === 'states') && subpath.value.length) {
-    return `${resourceLabel.value} - ${subpath.value[subpath.value.length - 1]}`
-  }
-  return props.tag ? `${resourceLabel.value} - ${platformName(props.tag)}` : resourceLabel.value
 })
 
 /** Breadcrumb segments for navigation */
@@ -223,16 +214,31 @@ async function reload() {
   return load(false)
 }
 
-function navigateTo(pathSegments: string[]) {
+function routeFor(pathSegments: string[]) {
   const label = route.query.label as string | undefined
   const baseQuery = label ? { label } : {}
   const query = pathSegments.length ? { ...baseQuery, path: pathSegments.join('/') } : (label ? baseQuery : undefined)
-  router.push({
+  return {
     name: props.tag ? 'browse' : 'browse-flat',
     params: props.tag ? { resource: props.resource, tag: props.tag } : { resource: props.resource },
     query,
-  })
+  }
 }
+
+function navigateTo(pathSegments: string[]) {
+  router.push(routeFor(pathSegments))
+}
+
+const crumbs = computed<Crumb[]>(() => {
+  const root = props.resource === 'fs'
+    ? resourceLabel.value
+    : `/${resourceLabel.value}${props.tag ? `/${props.tag}` : ''}`
+  const items: Crumb[] = [{ label: root, to: routeFor([]) }]
+  breadcrumbs.value.forEach((c, i) => {
+    items.push({ label: c.label, to: i < breadcrumbs.value.length - 1 ? routeFor(c.path) : undefined })
+  })
+  return items
+})
 
 function openFolder(name: string) {
   navigateTo([...subpath.value, name])
@@ -472,27 +478,15 @@ onMounted(load)
 
 <template>
   <div class="mx-auto max-w-[1600px] p-6 space-y-6">
+    <AppHeader />
+
     <!-- Header -->
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="goBack">
         <ArrowLeft class="h-5 w-5" />
       </Button>
       <div class="flex-1 min-w-0">
-        <h1 class="text-2xl font-bold tracking-tight truncate">{{ title }}</h1>
-        <!-- Breadcrumbs -->
-        <div v-if="breadcrumbs.length" class="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-          <button class="hover:text-foreground" @click="navigateTo([])">/{{ resourceLabel }}{{ props.tag && props.resource !== 'fs' ? `/${props.tag}` : '' }}</button>
-          <template v-for="(crumb, i) in breadcrumbs" :key="i">
-            <span>/</span>
-            <button
-              class="hover:text-foreground"
-              :class="i === breadcrumbs.length - 1 ? 'text-foreground font-medium' : ''"
-              @click="navigateTo(crumb.path)"
-            >
-              {{ crumb.label }}
-            </button>
-          </template>
-        </div>
+        <Breadcrumbs :items="crumbs" />
       </div>
     </div>
 

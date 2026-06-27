@@ -9,6 +9,9 @@ import ApkInstallerView from '@/views/ApkInstallerView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(_to, _from, savedPosition) {
+    return savedPosition ?? { top: 0 }
+  },
   routes: [
     { path: '/', name: 'login', component: LoginView },
     { path: '/dashboard/:tab?', name: 'dashboard', component: DashboardView, props: true },
@@ -40,6 +43,12 @@ const router = createRouter({
       props: route => ({ tag: route.params.tag, tab: 'samples' }),
     },
     {
+      path: '/platform/:tag/game/:id/guides/:file',
+      name: 'guide-view',
+      component: () => import('@/views/GuideViewer.vue'),
+      props: true,
+    },
+    {
       path: '/platform/:tag/game/:id/:tab?',
       name: 'game',
       component: () => import('@/views/GameDetailView.vue'),
@@ -47,6 +56,7 @@ const router = createRouter({
     },
     { path: '/browse/:resource/:tag', name: 'browse', component: BrowseView, props: true },
     { path: '/browse/:resource', name: 'browse-flat', component: BrowseView, props: true },
+    { path: '/:pathMatch(.*)*', name: 'not-found', redirect: { name: 'dashboard' } },
   ],
 })
 

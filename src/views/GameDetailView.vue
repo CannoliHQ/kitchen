@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, getGames, moveGame, renameGame, type GameDetail } from '@/api/client'
 import { platformName } from '@/api/platforms'
@@ -11,7 +11,9 @@ import Dropdown from '@/components/ui/Dropdown.vue'
 import type { DropdownItem } from '@/components/ui/Dropdown.vue'
 import MoveDialog from '@/components/file/MoveDialog.vue'
 import RenameDialog from '@/components/file/RenameDialog.vue'
-import { ArrowLeft, ImagePlus, Upload, Trash2, FolderInput, Pencil } from 'lucide-vue-next'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
+import { ImagePlus, Upload, Trash2, FolderInput, Pencil } from 'lucide-vue-next'
 import RomTab from '@/components/game/RomTab.vue'
 import SavesTab from '@/components/game/SavesTab.vue'
 import StatesTab from '@/components/game/StatesTab.vue'
@@ -31,6 +33,23 @@ function backRoute() {
   if (folder) return { name: 'platform-folder', params: { tag: props.tag, folder } }
   return { name: 'platform', params: { tag: props.tag } }
 }
+
+const crumbs = computed<Crumb[]>(() => {
+  const items: Crumb[] = [
+    { label: 'Platforms', to: { name: 'dashboard' } },
+    { label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag } } },
+  ]
+  const folder = game.value?.folder
+  if (folder) {
+    const parts = folder.split('/').filter(Boolean)
+    parts.forEach((part, i) => {
+      const path = parts.slice(0, i + 1).join('/')
+      items.push({ label: part, to: { name: 'platform-folder', params: { tag: props.tag, folder: path } } })
+    })
+  }
+  items.push({ label: game.value?.displayName ?? '' })
+  return items
+})
 const loading = ref(true)
 const error = ref<string | null>(null)
 const artSrc = ref<string | null>(null)
@@ -49,6 +68,11 @@ const activeTab = computed<TabKey>(() =>
 function selectTab(tab: TabKey) {
   router.replace(`/platform/${encodeURIComponent(props.tag)}/game/${props.id}/${tab}`)
 }
+
+// Normalize unknown tab segments to the canonical URL
+watch(() => props.tab, t => {
+  if (t && !TAB_KEYS.includes(t as TabKey)) selectTab('rom')
+}, { immediate: true })
 
 const heroStyle = computed(() => {
   const name = game.value?.displayName ?? ''
@@ -203,20 +227,16 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="mx-auto max-w-[1600px] p-6">
+    <AppHeader class="mb-6" />
+
     <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
     <div v-else-if="error" class="text-base py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
       <Button variant="outline" size="sm" @click="loadGame">Retry</Button>
     </div>
     <template v-else-if="game">
-      <div class="flex items-center justify-between mb-4">
-        <button
-          class="flex items-center gap-1.5 -ml-1 text-foreground/70 hover:text-foreground transition-colors"
-          @click="router.push(backRoute())"
-        >
-          <ArrowLeft class="h-5 w-5" />
-          <span class="text-base font-medium">{{ platformName(props.tag) }}</span>
-        </button>
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <Breadcrumbs :items="crumbs" />
         <Dropdown :items="actionItems" />
       </div>
 
@@ -292,6 +312,7 @@ onBeforeUnmount(() => {
           :key="t.key"
           class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap"
           :class="activeTab === t.key ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+          :aria-current="activeTab === t.key ? 'page' : undefined"
           @click="selectTab(t.key)"
         >
           {{ t.label }}<span v-if="t.count !== null"> ({{ t.count }})</span>

@@ -2,7 +2,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGames, uploadFiles, createFolder, moveGame, moveFile, renameGame, deleteGame, deleteFile, type GameRow } from '@/api/client'
-import { platformName } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Progress from '@/components/ui/Progress.vue'
@@ -13,7 +12,7 @@ import Modal from '@/components/ui/Modal.vue'
 import NewFolderDialog from '@/components/file/NewFolderDialog.vue'
 import MoveDialog from '@/components/file/MoveDialog.vue'
 import RenameDialog from '@/components/file/RenameDialog.vue'
-import { Check, CheckSquare, ChevronRight, Folder, LayoutGrid, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
+import { Check, CheckSquare, LayoutGrid, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
 import { folderLeaf } from '@/lib/folders'
 
 const props = defineProps<{ tag: string; folder: string }>()
@@ -39,16 +38,6 @@ const currentFolders = computed(() => {
     const remainder = f.slice(cur.length + 1)
     return !remainder.includes('/')
   })
-})
-
-const breadcrumbSegments = computed(() => {
-  const cur = currentFolder.value
-  if (!cur) return []
-  const parts = cur.split('/')
-  return parts.map((part, i) => ({
-    label: part,
-    path: parts.slice(0, i + 1).join('/'),
-  }))
 })
 
 const viewMode = ref<'cards' | 'table'>(
@@ -422,29 +411,6 @@ onBeforeUnmount(() => {
       </div>
       <Progress :value="uploadProgress" class="!h-2.5" />
     </div>
-
-    <nav
-      v-if="currentFolder"
-      class="flex items-center gap-1.5 flex-wrap rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-sm"
-    >
-      <Folder class="h-4 w-4 text-amber-500 shrink-0" />
-      <button
-        class="text-foreground/60 hover:text-foreground transition-colors"
-        @click="router.push({ name: 'platform', params: { tag: props.tag } })"
-      >{{ platformName(props.tag) }}</button>
-      <template v-for="(seg, i) in breadcrumbSegments" :key="seg.path">
-        <ChevronRight class="h-3.5 w-3.5 shrink-0 text-foreground/40" />
-        <span
-          v-if="i === breadcrumbSegments.length - 1"
-          class="text-foreground font-semibold"
-        >{{ seg.label }}</span>
-        <button
-          v-else
-          class="text-foreground/60 hover:text-foreground transition-colors"
-          @click="router.push({ name: 'platform-folder', params: { tag: props.tag, folder: seg.path } })"
-        >{{ seg.label }}</button>
-      </template>
-    </nav>
 
     <div
       v-if="selectMode && selectedCount > 0"

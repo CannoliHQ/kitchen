@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { listVolumes, type Volume } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
 import { ArrowLeft } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -37,12 +38,13 @@ function usedPct(v: Volume): number {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[900px] p-6 space-y-6">
+  <div class="mx-auto max-w-[1600px] p-6 space-y-6">
+    <AppHeader />
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard', params: { tab: 'tools' } })">
-        <ArrowLeft class="h-4 w-4" />
+        <ArrowLeft class="h-5 w-5" />
       </Button>
-      <h1 class="text-xl font-bold">File Manager</h1>
+      <h1 class="text-2xl font-bold tracking-tight">File Manager</h1>
     </div>
 
     <p v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Loading volumes...</p>

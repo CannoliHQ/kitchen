@@ -3,13 +3,14 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { uploadFiles } from '@/api/client'
 import { platformName, supportsFbneoSamples } from '@/api/platforms'
-import Button from '@/components/ui/Button.vue'
 import Dropdown from '@/components/ui/Dropdown.vue'
 import type { DropdownItem } from '@/components/ui/Dropdown.vue'
 import Progress from '@/components/ui/Progress.vue'
 import GamesTab from '@/components/platform/GamesTab.vue'
 import ResourceTab from '@/components/platform/ResourceTab.vue'
-import { ArrowLeft, Cpu, FolderPlus, Gamepad2, Image, Layers, Music, Upload } from 'lucide-vue-next'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
+import { Cpu, FolderPlus, Gamepad2, Image, Layers, Music, Upload } from 'lucide-vue-next'
 
 type TabKey = 'games' | 'overlays' | 'bios' | 'samples'
 const TAB_KEYS: readonly TabKey[] = ['games', 'overlays', 'bios', 'samples']
@@ -21,6 +22,25 @@ const router = useRouter()
 const activeTab = computed<TabKey>(() => {
   const t = TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'games'
   return t === 'samples' && !supportsFbneoSamples(props.tag) ? 'games' : t
+})
+
+const crumbs = computed<Crumb[]>(() => {
+  const items: Crumb[] = [{ label: 'Platforms', to: { name: 'dashboard' } }]
+  const folder = props.folder
+  if (folder) {
+    items.push({ label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag } } })
+    const parts = folder.split('/').filter(Boolean)
+    parts.forEach((part, i) => {
+      const path = parts.slice(0, i + 1).join('/')
+      items.push({
+        label: part,
+        to: i < parts.length - 1 ? { name: 'platform-folder', params: { tag: props.tag, folder: path } } : undefined,
+      })
+    })
+  } else {
+    items.push({ label: platformName(props.tag) })
+  }
+  return items
 })
 
 const tabs = computed(() => {
@@ -114,13 +134,10 @@ const actionItems = computed<DropdownItem[]>(() => {
   <div class="mx-auto max-w-[1600px] p-6 space-y-6">
     <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtFiles" />
 
+    <AppHeader />
+
     <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-3">
-        <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard' })">
-          <ArrowLeft class="h-5 w-5" />
-        </Button>
-        <h1 class="text-3xl font-bold tracking-tight">{{ platformName(props.tag) }}</h1>
-      </div>
+      <Breadcrumbs :items="crumbs" />
       <div class="sm:ml-auto">
         <Dropdown :items="actionItems" />
       </div>
@@ -153,6 +170,7 @@ const actionItems = computed<DropdownItem[]>(() => {
         :key="t.key"
         class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap"
         :class="activeTab === t.key ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        :aria-current="activeTab === t.key ? 'page' : undefined"
         @click="selectTab(t.key)"
       >
         {{ t.label }}

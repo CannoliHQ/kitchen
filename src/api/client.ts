@@ -273,6 +273,14 @@ export async function downloadGameGuide(tag: string, id: number, name: string): 
   await downloadFile(`${gameBase(tag, id)}/guides?file=${encodeURIComponent(name)}`, name)
 }
 
+/** Fetch a guide as an authenticated blob. Caller must revoke the returned url. */
+export async function gameGuideBlob(tag: string, id: number, name: string): Promise<{ url: string; type: string }> {
+  const res = await request(`${gameBase(tag, id)}/guides?file=${encodeURIComponent(name)}`)
+  if (!res.ok) throw new Error(`gameGuideBlob ${res.status}`)
+  const blob = await res.blob()
+  return { url: URL.createObjectURL(blob), type: blob.type }
+}
+
 export async function uploadGameGuide(tag: string, id: number, file: File): Promise<void> {
   const res = await request(`${gameBase(tag, id)}/guides?name=${encodeURIComponent(file.name)}`, {
     method: 'POST',

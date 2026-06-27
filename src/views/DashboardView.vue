@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getTags, clearCredentials } from '@/api/client'
+import { getTags } from '@/api/client'
 import { platformName, platformLabel, platformIcon, groupPlatforms, type PlatformGroup } from '@/api/platforms'
-import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
-import { Wallpaper, LogOut, Search, Gamepad2, ArrowDownAZ, CalendarDays, Palette, Layers } from 'lucide-vue-next'
+import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Palette, Layers } from 'lucide-vue-next'
 import ToolsTab from '@/components/tools/ToolsTab.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
 
 const props = defineProps<{ tab?: string }>()
 const router = useRouter()
@@ -26,6 +26,12 @@ const activeTab = computed<'content' | 'customization' | 'tools'>(() => {
 function selectTab(tab: 'content' | 'customization' | 'tools') {
   router.replace('/dashboard/' + (tab === 'content' ? 'games' : tab))
 }
+
+// Normalize unknown tab segments (e.g. /dashboard/banana) to the canonical URL
+const VALID_TABS = ['games', 'customization', 'tools']
+watch(() => props.tab, t => {
+  if (t && !VALID_TABS.includes(t)) router.replace('/dashboard/games')
+}, { immediate: true })
 
 const filteredTags = computed(() => {
   const q = search.value.toLowerCase()
@@ -54,46 +60,35 @@ function openPlatform(tag: string) {
 function browseFlat(resource: string) {
   router.push({ name: 'browse-flat', params: { resource } })
 }
-
-function disconnect() {
-  clearCredentials()
-  router.push({ name: 'login' })
-}
 </script>
 
 <template>
   <div class="mx-auto max-w-[1600px] p-6 pb-0 space-y-8 min-h-screen flex flex-col">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img src="/logo.png" alt="Cannoli" class="h-9 w-auto" />
-        <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
-      </div>
-      <Button variant="ghost" size="sm" @click="disconnect">
-        <LogOut class="h-4 w-4" />
-        Disconnect
-      </Button>
-    </div>
+    <AppHeader />
 
     <!-- Nav tabs -->
     <div class="flex items-center gap-1 border-b border-border">
       <button
-        class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+        class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px"
         :class="activeTab === 'content' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        :aria-current="activeTab === 'content' ? 'page' : undefined"
         @click="selectTab('content')"
       >
-        Games
+        Platforms
       </button>
       <button
-        class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+        class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px"
         :class="activeTab === 'customization' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        :aria-current="activeTab === 'customization' ? 'page' : undefined"
         @click="selectTab('customization')"
       >
         Customization
       </button>
       <button
-        class="px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+        class="px-4 py-2.5 text-base font-semibold transition-colors border-b-2 -mb-px"
         :class="activeTab === 'tools' ? 'border-accent text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+        :aria-current="activeTab === 'tools' ? 'page' : undefined"
         @click="selectTab('tools')"
       >
         Tools

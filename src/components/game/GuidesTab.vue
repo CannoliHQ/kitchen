@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { listGameGuides, downloadGameGuide, uploadGameGuide, deleteGameGuide, type GameFile } from '@/api/client'
 import { confirm } from '@/lib/confirm'
 import Button from '@/components/ui/Button.vue'
-import { BookOpen, Upload, Download, Trash2 } from 'lucide-vue-next'
+import { BookOpen, Upload, Download, Trash2, Eye } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; id: number }>()
+const router = useRouter()
+
+function openGuide(f: GameFile) {
+  router.push({ name: 'guide-view', params: { tag: props.tag, id: props.id, file: f.name } })
+}
 
 const entries = ref<GameFile[]>([])
 const loading = ref(true)
@@ -121,7 +127,15 @@ onMounted(load)
             {{ formatSize(f.size) }}<template v-if="formatWhen(f.modified)"> &middot; {{ formatWhen(f.modified) }}</template>
           </div>
         </div>
-        <div class="flex gap-1.5 shrink-0">
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button
+            class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-40"
+            :disabled="busy"
+            title="View"
+            @click="openGuide(f)"
+          >
+            <Eye class="h-4 w-4" />
+          </button>
           <button
             class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-40"
             :disabled="busy"

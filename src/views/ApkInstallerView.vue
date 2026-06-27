@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { uploadApk, getApkStatus } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
 import Progress from '@/components/ui/Progress.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
 import { ArrowLeft, PackagePlus, CheckCircle2, XCircle, Smartphone } from 'lucide-vue-next'
 
 type Phase = 'idle' | 'uploading' | 'waiting' | 'success' | 'failure'
@@ -96,12 +97,13 @@ function reset() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[700px] p-6 space-y-6">
+  <div class="mx-auto max-w-[1600px] p-6 space-y-6">
+    <AppHeader />
     <div class="flex items-center gap-3">
       <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard', params: { tab: 'tools' } })">
-        <ArrowLeft class="h-4 w-4" />
+        <ArrowLeft class="h-5 w-5" />
       </Button>
-      <h1 class="text-xl font-bold">APK Installer</h1>
+      <h1 class="text-2xl font-bold tracking-tight">APK Installer</h1>
     </div>
 
     <div
