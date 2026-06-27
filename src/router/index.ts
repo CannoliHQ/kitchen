@@ -34,6 +34,12 @@ const router = createRouter({
       props: route => ({ tag: route.params.tag, tab: 'bios' }),
     },
     {
+      path: '/platform/:tag/samples',
+      name: 'platform-samples',
+      component: PlatformView,
+      props: route => ({ tag: route.params.tag, tab: 'samples' }),
+    },
+    {
       path: '/platform/:tag/game/:id/:tab?',
       name: 'game',
       component: () => import('@/views/GameDetailView.vue'),

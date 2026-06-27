@@ -105,3 +105,9 @@ export function platformLabel(tag: string): string {
   const name = PLATFORM_NAMES[tag]
   return name ? `${name} (${tag})` : tag
 }
+
+const FBNEO_SAMPLE_TAGS = ['FBN']
+
+export function supportsFbneoSamples(tag: string): boolean {
+  return FBNEO_SAMPLE_TAGS.includes(tag)
+}

@@ -2,36 +2,44 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { uploadFiles } from '@/api/client'
-import { platformName } from '@/api/platforms'
+import { platformName, supportsFbneoSamples } from '@/api/platforms'
 import Button from '@/components/ui/Button.vue'
 import Dropdown from '@/components/ui/Dropdown.vue'
 import type { DropdownItem } from '@/components/ui/Dropdown.vue'
 import Progress from '@/components/ui/Progress.vue'
 import GamesTab from '@/components/platform/GamesTab.vue'
 import ResourceTab from '@/components/platform/ResourceTab.vue'
-import { ArrowLeft, Cpu, FolderPlus, Gamepad2, Image, Layers, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Cpu, FolderPlus, Gamepad2, Image, Layers, Music, Upload } from 'lucide-vue-next'
 
-type TabKey = 'games' | 'overlays' | 'bios'
-const TAB_KEYS: readonly TabKey[] = ['games', 'overlays', 'bios']
+type TabKey = 'games' | 'overlays' | 'bios' | 'samples'
+const TAB_KEYS: readonly TabKey[] = ['games', 'overlays', 'bios', 'samples']
+const SAMPLES_SUBPATH = ['fbneo', 'samples']
 
 const props = defineProps<{ tag: string; tab?: string; folder?: string }>()
 const router = useRouter()
 
-const activeTab = computed<TabKey>(() =>
-  TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'games',
-)
+const activeTab = computed<TabKey>(() => {
+  const t = TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'games'
+  return t === 'samples' && !supportsFbneoSamples(props.tag) ? 'games' : t
+})
 
-const tabs: { key: TabKey; label: string }[] = [
-  { key: 'games', label: 'Games' },
-  { key: 'overlays', label: 'Overlays' },
-  { key: 'bios', label: 'BIOS' },
-]
+const tabs = computed(() => {
+  const list: { key: TabKey; label: string }[] = [
+    { key: 'games', label: 'Games' },
+    { key: 'overlays', label: 'Overlays' },
+    { key: 'bios', label: 'BIOS' },
+  ]
+  if (supportsFbneoSamples(props.tag)) list.push({ key: 'samples', label: 'Samples' })
+  return list
+})
 
 function selectTab(tab: TabKey) {
   if (tab === 'games') {
     router.replace({ name: 'platform', params: { tag: props.tag } })
   } else if (tab === 'overlays') {
     router.replace({ name: 'platform-overlays', params: { tag: props.tag } })
+  } else if (tab === 'samples') {
+    router.replace({ name: 'platform-samples', params: { tag: props.tag } })
   } else {
     router.replace({ name: 'platform-bios', params: { tag: props.tag } })
   }
@@ -40,6 +48,7 @@ function selectTab(tab: TabKey) {
 const gamesTabRef = ref<InstanceType<typeof GamesTab> | null>(null)
 const overlaysTabRef = ref<InstanceType<typeof ResourceTab> | null>(null)
 const biosTabRef = ref<InstanceType<typeof ResourceTab> | null>(null)
+const samplesTabRef = ref<InstanceType<typeof ResourceTab> | null>(null)
 
 const bulkArtInput = ref<HTMLInputElement>()
 const bulkArtUploading = ref(false)
@@ -88,6 +97,11 @@ const actionItems = computed<DropdownItem[]>(() => {
   if (activeTab.value === 'overlays') {
     return [
       { label: 'Upload Overlay', icon: Layers, onSelect: () => overlaysTabRef.value?.triggerUpload() },
+    ]
+  }
+  if (activeTab.value === 'samples') {
+    return [
+      { label: 'Upload Sample', icon: Music, onSelect: () => samplesTabRef.value?.triggerUpload() },
     ]
   }
   return [
@@ -154,13 +168,25 @@ const actionItems = computed<DropdownItem[]>(() => {
       />
       <ResourceTab
         v-else-if="activeTab === 'overlays'"
+        key="overlays"
         ref="overlaysTabRef"
         :tag="props.tag"
         resource="overlays"
         display="images"
       />
       <ResourceTab
+        v-else-if="activeTab === 'samples'"
+        key="samples"
+        ref="samplesTabRef"
+        :tag="props.tag"
+        resource="bios"
+        :sub-path="SAMPLES_SUBPATH"
+        empty-label="No samples yet."
+        display="list"
+      />
+      <ResourceTab
         v-else
+        key="bios"
         ref="biosTabRef"
         :tag="props.tag"
         resource="bios"
