@@ -17,12 +17,20 @@ It is a Web UI for file management with a goofy name.
 
 You can manage the following:
 
-- Roms
+- ROMs
 - Saves
-- Save States (wip)
+- Save States
 - BIOS
 - Box Art
 - Wallpapers
+- Overlays
+- Shaders
+- Guides (with in-app preview for PDFs, images, and text/markdown)
+
+Plus tools:
+
+- File Manager (browse device storage)
+- APK Installer
 
 ---
 
