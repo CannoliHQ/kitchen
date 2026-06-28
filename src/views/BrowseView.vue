@@ -11,7 +11,8 @@ import Progress from '@/components/ui/Progress.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
 import GamePickerDialog from '@/components/file/GamePickerDialog.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2, Download, Eye } from 'lucide-vue-next'
+import ShaderUploadDialog from '@/components/file/ShaderUploadDialog.vue'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, FolderUp, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2, Download, Eye } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
@@ -55,6 +56,13 @@ const gamePickerLoading = ref(false)
 const gamePickerMode = ref<'folder' | 'upload' | 'art'>('folder')
 const pendingUploadFiles = ref<globalThis.File[]>([])
 const bulkArtInput = ref<HTMLInputElement>()
+const showShaderUpload = ref(false)
+const existingDirNames = computed(() => entries.value.filter(e => e.type === 'dir').map(e => e.name))
+
+function onShaderUploaded() {
+  showShaderUpload.value = false
+  reload()
+}
 
 /** Current subpath segments parsed from route query */
 const subpath = computed<string[]>(() => {
@@ -454,16 +462,36 @@ onMounted(load)
     <AppHeader />
 
     <!-- Header -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       <Button variant="ghost" size="icon" @click="goBack">
         <ArrowLeft class="h-5 w-5" />
       </Button>
       <div class="flex-1 min-w-0">
         <Breadcrumbs :items="crumbs" />
       </div>
+      <!-- Right-aligned page action(s) -->
+      <Button v-if="props.resource === 'shaders'" variant="outline" size="sm" class="shrink-0" @click="showShaderUpload = true">
+        <FolderUp class="h-4 w-4" />
+        {{ $t('browse.addShader') }}
+      </Button>
+      <Button v-else-if="!['guides', 'states', 'art', 'bios', 'saves', 'wallpapers', 'shaders'].includes(props.resource)" variant="outline" size="sm" class="shrink-0" @click="showNewFolder = !showNewFolder">
+        <FolderPlus class="h-4 w-4" />
+        {{ $t('common.newFolder') }}
+      </Button>
+      <template v-else-if="props.resource === 'art' && props.tag">
+        <Button variant="outline" size="sm" class="shrink-0" @click="openArtPicker">
+          <ImagePlus class="h-4 w-4" />
+          {{ $t('browse.addBoxArtForGame') }}
+        </Button>
+        <Button variant="outline" size="sm" class="shrink-0" @click="bulkArtInput?.click()">
+          <Upload class="h-4 w-4" />
+          {{ $t('browse.bulkUploadPreNamed') }}
+        </Button>
+        <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtUpload" />
+      </template>
     </div>
 
-    <!-- Actions bar -->
+    <!-- Empty-state CTA: guides/states with no game selected -->
     <div
       v-if="['guides', 'states'].includes(props.resource) && props.tag && !subpath.length"
       class="rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-150 border-border hover:border-accent/50 hover:bg-accent/5"
@@ -471,23 +499,6 @@ onMounted(load)
     >
       <FolderPlus class="h-8 w-8 mx-auto text-muted-foreground" />
       <p class="mt-3 text-sm font-medium text-muted-foreground">{{ props.resource === 'guides' ? $t('browse.addGuidesForGame') : $t('browse.addSaveStatesForGame') }}</p>
-    </div>
-    <div v-else-if="props.resource === 'art' && props.tag" class="flex flex-wrap justify-center gap-2">
-      <Button variant="outline" size="sm" @click="openArtPicker">
-        <ImagePlus class="h-4 w-4" />
-        {{ $t('browse.addBoxArtForGame') }}
-      </Button>
-      <Button variant="outline" size="sm" @click="bulkArtInput?.click()">
-        <Upload class="h-4 w-4" />
-        {{ $t('browse.bulkUploadPreNamed') }}
-      </Button>
-      <input ref="bulkArtInput" type="file" accept="image/*" multiple class="hidden" @change="handleBulkArtUpload" />
-    </div>
-    <div v-else-if="!['guides', 'states', 'art', 'bios', 'saves', 'wallpapers'].includes(props.resource)" class="flex items-center gap-2">
-      <Button variant="outline" size="sm" @click="showNewFolder = !showNewFolder">
-        <FolderPlus class="h-4 w-4" />
-        {{ $t('common.newFolder') }}
-      </Button>
     </div>
 
     <!-- New folder input -->
@@ -508,7 +519,7 @@ onMounted(load)
 
     <!-- Upload area -->
     <div
-      v-if="!(['guides', 'states'].includes(props.resource) && props.tag && !subpath.length) && !(props.resource === 'art' && props.tag)"
+      v-if="props.resource !== 'shaders' && !(['guides', 'states'].includes(props.resource) && props.tag && !subpath.length) && !(props.resource === 'art' && props.tag)"
       class="rounded-xl border-2 border-dashed p-6 text-center transition-all duration-150"
       :class="dragOver ? 'border-accent bg-accent/5' : 'border-border'"
       @dragover.prevent="dragOver = true"
@@ -725,6 +736,15 @@ onMounted(load)
       @cancel="cancelGamePicker"
       @pick="pickGame"
       @confirm-art="onConfirmArt"
+    />
+
+    <!-- Shader folder uploader -->
+    <ShaderUploadDialog
+      :open="showShaderUpload"
+      :base-segments="apiSegments"
+      :existing-names="existingDirNames"
+      @close="showShaderUpload = false"
+      @uploaded="onShaderUploaded"
     />
   </div>
 </template>

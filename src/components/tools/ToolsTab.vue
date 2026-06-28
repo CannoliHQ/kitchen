@@ -5,8 +5,8 @@ import { FolderOpen, PackagePlus } from 'lucide-vue-next'
 const router = useRouter()
 
 const tools = [
-  { nameKey: 'tools.fileManager', icon: FolderOpen, route: { name: 'tools-files' } },
   { nameKey: 'tools.apkInstaller', icon: PackagePlus, route: { name: 'tools-apk' } },
+  { nameKey: 'tools.fileManager', icon: FolderOpen, route: { name: 'tools-files' } },
 ]
 </script>
 

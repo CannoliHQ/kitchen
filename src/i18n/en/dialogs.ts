@@ -12,4 +12,18 @@ export default {
   pickADifferentGame: 'Pick a different game',
   actions: 'Actions',
   breadcrumb: 'Breadcrumb',
+  shaderUpload: {
+    title: 'Add shader',
+    dropHint: 'Drop a shader folder here, or click to choose',
+    layoutHint: 'Pick the complete folder containing both the preset and shader sources.',
+    supportedHint: 'Only GLSLP Presets and GLSL Shaders are supported.',
+    willAdd: 'Will add',
+    fileCount: '{n} file | {n} files',
+    presetCount: '{n} preset | {n} presets',
+    noPreset: 'No GLSLP preset (.glslp) found in this folder.',
+    existsWarning: '“{name}” already exists — its files will be overwritten.',
+    ready: 'Ready to upload.',
+    chooseAnother: 'Choose a different folder',
+    partialFail: '{n} folder failed to upload | {n} folders failed to upload',
+  },
 }

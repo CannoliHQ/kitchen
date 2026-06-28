@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onActivated, onDeactivated, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { listGameSaves, downloadGameSave, uploadGameSave, deleteGameSave, type GameFile } from '@/api/client'
 import { confirm } from '@/lib/confirm'
@@ -14,6 +14,11 @@ const entries = ref<GameFile[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const busy = ref(false)
+
+// Only the active (visible) tab teleports its actions into the tab strip.
+const isActive = ref(true)
+onActivated(() => { isActive.value = true })
+onDeactivated(() => { isActive.value = false })
 
 async function load() {
   loading.value = true
@@ -76,12 +81,11 @@ onMounted(load)
 
 <template>
   <div class="space-y-3">
-    <div class="flex items-center justify-between">
-      <div class="text-base font-semibold text-foreground/85">{{ $t('game.savesCount', { n: entries.length }) }}</div>
-      <Button variant="outline" :disabled="busy" @click="onUpload">
+    <Teleport v-if="isActive" to="#game-tab-actions">
+      <Button variant="outline" size="sm" :disabled="busy" @click="onUpload">
         <Upload class="h-4 w-4 mr-1.5" /> {{ $t('common.upload') }}
       </Button>
-    </div>
+    </Teleport>
 
     <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="py-8 text-center space-y-2">

@@ -287,29 +287,30 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="sm:hidden mt-6">
-        <select
-          :value="activeTab"
-          class="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-base font-medium"
-          @change="selectTab(($event.target as HTMLSelectElement).value as TabKey)"
-        >
-          <option v-for="t in tabs" :key="t.key" :value="t.key">
-            {{ t.label }}{{ t.count !== null ? ` (${t.count})` : '' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="hidden sm:flex items-center gap-1 border-b border-border mt-6">
+      <div class="flex items-center gap-1 border-b border-border mt-6">
+        <!-- desktop tabs -->
         <button
           v-for="t in tabs"
           :key="t.key"
-          class="first:pl-0 px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px whitespace-nowrap"
+          class="hidden sm:inline-flex items-center first:pl-0 px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px whitespace-nowrap"
           :class="activeTab === t.key ? 'border-accent text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'"
           :aria-current="activeTab === t.key ? 'page' : undefined"
           @click="selectTab(t.key)"
         >
           {{ t.label }}<span v-if="t.count !== null"> ({{ t.count }})</span>
         </button>
+        <!-- mobile select -->
+        <select
+          class="sm:hidden flex-1 my-2 rounded-lg border border-border bg-card px-3 py-2 text-base font-medium"
+          :value="activeTab"
+          @change="selectTab(($event.target as HTMLSelectElement).value as TabKey)"
+        >
+          <option v-for="t in tabs" :key="t.key" :value="t.key">
+            {{ t.label }}{{ t.count !== null ? ` (${t.count})` : '' }}
+          </option>
+        </select>
+        <!-- active tab's actions teleport here -->
+        <div id="game-tab-actions" class="ml-auto flex items-center gap-2 shrink-0"></div>
       </div>
 
       <div class="mt-6">

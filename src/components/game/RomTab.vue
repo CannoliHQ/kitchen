@@ -36,10 +36,6 @@ onMounted(load)
 
 <template>
   <div class="space-y-3">
-    <div class="text-base font-semibold text-foreground/85">
-      {{ $t('game.romFiles', { n: files.length }, files.length) }}
-    </div>
-
     <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>

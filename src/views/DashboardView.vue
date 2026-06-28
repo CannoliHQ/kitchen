@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { getTags } from '@/api/client'
 import { platformName, platformLabel, platformIcon, groupPlatforms, type PlatformGroup } from '@/api/platforms'
 import Input from '@/components/ui/Input.vue'
-import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Palette, Layers } from 'lucide-vue-next'
+import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Layers, StarsIcon } from 'lucide-vue-next'
 import ToolsTab from '@/components/tools/ToolsTab.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 
@@ -205,6 +205,30 @@ function browseFlat(resource: string) {
       <div class="space-y-4 flex-1">
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <button
+              type="button"
+              class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              @click="browseFlat('overlays')"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
+                <Layers class="h-5 w-5 text-accent" />
+              </div>
+              <span class="font-semibold">{{ $t('dashboard.overlays') }}</span>
+            </div>
+          </button>
+          <button
+              type="button"
+              class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              @click="browseFlat('shaders')"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
+                <StarsIcon class="h-5 w-5 text-accent" />
+              </div>
+              <span class="font-semibold">{{ $t('dashboard.shaders') }}</span>
+            </div>
+          </button>
+          <button
             type="button"
             class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             @click="browseFlat('wallpapers')"
@@ -214,30 +238,6 @@ function browseFlat(resource: string) {
                 <Wallpaper class="h-5 w-5 text-accent" />
               </div>
               <span class="font-semibold">{{ $t('dashboard.wallpapers') }}</span>
-            </div>
-          </button>
-          <button
-            type="button"
-            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            @click="browseFlat('shaders')"
-          >
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
-                <Palette class="h-5 w-5 text-accent" />
-              </div>
-              <span class="font-semibold">{{ $t('dashboard.shaders') }}</span>
-            </div>
-          </button>
-          <button
-            type="button"
-            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            @click="browseFlat('overlays')"
-          >
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
-                <Layers class="h-5 w-5 text-accent" />
-              </div>
-              <span class="font-semibold">{{ $t('dashboard.overlays') }}</span>
             </div>
           </button>
         </div>

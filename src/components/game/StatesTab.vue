@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   listGameStates, deleteGameState, uploadGameState, downloadGameState, downloadGameStatesZip, gameStateThumbnailBlob,
@@ -18,6 +18,11 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const busy = ref(false)
 const selected = ref<Set<number>>(new Set())
+
+// Only the active (visible) tab teleports its actions into the tab strip.
+const isActive = ref(true)
+onActivated(() => { isActive.value = true })
+onDeactivated(() => { isActive.value = false })
 const thumbs = ref<Map<number, string>>(new Map())
 const rowError = ref<Map<number, string>>(new Map())
 
@@ -147,24 +152,20 @@ onBeforeUnmount(clearThumbs)
 
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between gap-3">
-      <div class="text-base font-semibold text-foreground/85">
-        {{ $t('game.saveStatesCount', { n: occupiedCount, total: slots.length }) }}
-      </div>
-      <div class="flex gap-2">
-        <Button
-          v-if="selected.size"
-          variant="outline"
-          :disabled="busy"
-          @click="onDeleteSelected"
-        >
-          <Trash2 class="h-4 w-4 mr-1.5" /> {{ $t('game.deleteSelected', { n: selected.size }) }}
-        </Button>
-        <Button variant="outline" :disabled="busy || !occupiedCount" @click="onDownloadZip">
-          <Archive class="h-4 w-4 mr-1.5" /> {{ $t('game.downloadAllZip') }}
-        </Button>
-      </div>
-    </div>
+    <Teleport v-if="isActive" to="#game-tab-actions">
+      <Button
+        v-if="selected.size"
+        variant="outline"
+        size="sm"
+        :disabled="busy"
+        @click="onDeleteSelected"
+      >
+        <Trash2 class="h-4 w-4 mr-1.5" /> {{ $t('game.deleteSelected', { n: selected.size }) }}
+      </Button>
+      <Button variant="outline" size="sm" :disabled="busy || !occupiedCount" @click="onDownloadZip">
+        <Archive class="h-4 w-4 mr-1.5" /> {{ $t('game.downloadAllZip') }}
+      </Button>
+    </Teleport>
 
     <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="py-8 text-center space-y-2">

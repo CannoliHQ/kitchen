@@ -14,6 +14,7 @@ export default {
   addSaveStatesForGame: 'Add save states for a game',
   addBoxArtForGame: 'Add box art for a game',
   bulkUploadPreNamed: 'Bulk Upload Pre-Named Files',
+  addShader: 'Add shader',
   dragFilesHere: 'Drag files here or',
   browseToUpload: 'browse to upload',
   fileCountOfTotal: '({current} of {total})',

@@ -11,9 +11,9 @@ export default {
   wallpapers: 'Wallpapers',
   shaders: 'Shaders',
   overlays: 'Overlays',
-  footerIconsPrefix: 'Platform icons courtesy of',
-  footerIconsSuffix: '(CC BY 4.0).',
-  footerPico8Prefix: 'PICO-8 logo courtesy of',
+  footerIconsPrefix: 'Platform icons courtesy of ',
+  footerIconsSuffix: ' (CC BY 4.0).',
+  footerPico8Prefix: 'PICO-8 logo courtesy of ',
   footerPico8Suffix: '.',
   footerTrademarks: 'All trademarks are property of their respective owners.',
 }

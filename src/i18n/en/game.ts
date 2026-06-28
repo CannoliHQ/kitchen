@@ -38,13 +38,11 @@ export default {
   deleting: 'Deleting...',
 
   // ROM tab
-  romFiles: 'ROM file ({n}) | ROM files ({n})',
   loadRomsFailed: 'Failed to load ROM files',
   noRoms: 'No ROM files yet.',
   downloadFailed: 'Download failed',
 
   // Saves tab
-  savesCount: 'Saves ({n})',
   loadSavesFailed: 'Failed to load saves',
   uploadFailed: 'Upload failed',
   deleteFailed: 'Delete failed',
@@ -52,7 +50,6 @@ export default {
   deleteFileTitle: 'Delete {name}?',
 
   // Save states tab
-  saveStatesCount: 'Save States ({n} of {total})',
   loadStatesFailed: 'Failed to load save states',
   deleteSelected: 'Delete selected ({n})',
   downloadAllZip: 'Download all (ZIP)',
@@ -65,7 +62,6 @@ export default {
   deleteSlotTitle: 'Delete {label}?',
 
   // Guides tab
-  guidesCount: 'Guides ({n})',
   loadGuidesFailed: 'Failed to load guides',
   noGuides: 'No guides yet.',
 }
