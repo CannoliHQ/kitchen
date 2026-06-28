@@ -64,7 +64,7 @@ onUnmounted(() => {
     <template v-else>
       <Button variant="outline" @click="toggle">
         <slot>
-          Actions
+          {{ $t('dialogs.actions') }}
           <ChevronDown class="h-4 w-4" />
         </slot>
       </Button>

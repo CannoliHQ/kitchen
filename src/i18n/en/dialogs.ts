@@ -1,0 +1,15 @@
+export default {
+  moveItems: 'Move {count} item | Move {count} items',
+  moveHere: 'Move here',
+  failedToCreateFolder: 'Failed to create folder',
+  name: 'Name',
+  pickAGame: 'Pick a game',
+  addBoxArt: 'Add box art',
+  searchGames: 'Search games...',
+  noGamesFound: 'No games found.',
+  uploadingArtFor: 'Uploading art for',
+  dragImageHint: 'Drag an image here or click to browse',
+  pickADifferentGame: 'Pick a different game',
+  actions: 'Actions',
+  breadcrumb: 'Breadcrumb',
+}

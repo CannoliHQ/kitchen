@@ -267,16 +267,16 @@ function onDigitPaste(event: ClipboardEvent) {
         <img src="/logo.png" alt="Cannoli" class="mx-auto h-16 w-auto" />
         <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
         <template v-if="!checking">
-          <p v-if="connectionError" class="text-sm font-medium text-destructive">Cannot connect to server.<br>Ensure Nonna's Kitchen is running.</p>
-          <p v-else-if="showHost" class="text-lg font-semibold text-foreground">Enter your device IP.</p>
-          <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
+          <p v-if="connectionError" class="text-sm font-medium text-destructive">{{ $t('login.cannotConnect') }}<br>{{ $t('login.ensureRunning', { brand: "Nonna's Kitchen" }) }}</p>
+          <p v-else-if="showHost" class="text-lg font-semibold text-foreground">{{ $t('login.enterDeviceIp') }}</p>
+          <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">{{ $t('login.enterPin') }}</p>
         </template>
       </div>
 
       <div v-if="!checking" class="space-y-5">
         <!-- IP Address -->
         <div v-if="showHost" class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center block">Device IP Address</label>
+          <label class="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center block">{{ $t('login.deviceIpAddress') }}</label>
           <div class="flex items-center justify-center gap-1.5" @paste="onOctetPaste">
             <template v-for="(_, i) in 4" :key="i">
               <input
@@ -286,7 +286,7 @@ function onDigitPaste(event: ClipboardEvent) {
                 maxlength="3"
                 :value="octets[i]"
                 :disabled="loading"
-                class="h-12 w-12 border border-input bg-background text-center text-lg font-mono font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                class="h-12 w-12 rounded-lg border border-input bg-background text-center text-lg font-mono font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 @input="onOctetInput(i, $event)"
                 @keydown="onOctetKeydown(i, $event)"
               />
@@ -307,7 +307,7 @@ function onDigitPaste(event: ClipboardEvent) {
               maxlength="2"
               :value="digits[i]"
               :disabled="loading"
-              class="h-12 w-12 border bg-background text-center text-lg font-mono font-bold text-foreground uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-colors"
+              class="h-12 w-12 rounded-lg border bg-background text-center text-lg font-mono font-bold text-foreground uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-colors"
               :class="pinError ? 'border-destructive' : 'border-input'"
               @input="onDigitInput(i, $event)"
               @keydown="onDigitKeydown(i, $event)"

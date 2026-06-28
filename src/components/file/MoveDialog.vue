@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Modal from '@/components/ui/Modal.vue'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import { platformName } from '@/api/platforms'
 import { createFolder } from '@/api/client'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   tag: string
@@ -45,7 +48,7 @@ async function confirmNewFolder() {
     showNewFolder.value = false
     newFolderName.value = ''
   } catch {
-    newFolderError.value = 'Failed to create folder'
+    newFolderError.value = t('dialogs.failedToCreateFolder')
   }
 }
 
@@ -57,7 +60,7 @@ function cancelNewFolder() {
 </script>
 
 <template>
-  <Modal :title="`Move ${count} ${count === 1 ? 'item' : 'items'}`" @close="$emit('close')">
+  <Modal :title="$t('dialogs.moveItems', { count }, count)" @close="$emit('close')">
     <div class="space-y-1 max-h-64 overflow-y-auto -mx-1 px-1">
       <button
         class="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors"
@@ -92,26 +95,26 @@ function cancelNewFolder() {
         v-if="!showNewFolder"
         class="text-xs text-foreground/60 hover:text-foreground transition-colors"
         @click="showNewFolder = true"
-      >+ New folder</button>
+      >+ {{ $t('common.newFolder') }}</button>
       <div v-else class="space-y-1.5">
         <Input
           v-model="newFolderName"
-          placeholder="Folder name"
+          :placeholder="$t('common.folderName')"
           class="!h-8 !text-sm"
           @keydown.enter="confirmNewFolder"
           @keydown.escape="cancelNewFolder"
         />
         <p v-if="newFolderError" class="text-xs text-destructive">{{ newFolderError }}</p>
         <div class="flex gap-2">
-          <Button size="sm" variant="ghost" @click="cancelNewFolder">Cancel</Button>
-          <Button size="sm" :disabled="!newFolderName.trim()" @click="confirmNewFolder">Create</Button>
+          <Button size="sm" variant="ghost" @click="cancelNewFolder">{{ $t('common.cancel') }}</Button>
+          <Button size="sm" :disabled="!newFolderName.trim()" @click="confirmNewFolder">{{ $t('common.create') }}</Button>
         </div>
       </div>
     </div>
 
     <template #footer>
-      <Button variant="ghost" @click="$emit('close')">Cancel</Button>
-      <Button @click="$emit('move', selectedTarget)">Move here</Button>
+      <Button variant="ghost" @click="$emit('close')">{{ $t('common.cancel') }}</Button>
+      <Button @click="$emit('move', selectedTarget)">{{ $t('dialogs.moveHere') }}</Button>
     </template>
   </Modal>
 </template>

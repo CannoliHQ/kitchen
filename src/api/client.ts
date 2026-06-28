@@ -39,6 +39,7 @@ export function setCredentials(host: string, pin: string) {
   baseUrl.value = normalizeBaseUrl(host)
   token.value = pin ? btoa(`nonna:${pin}`) : ''
   localStorage.setItem('cannoli_host', host)
+  localStorage.removeItem('cannoli_pinless')
   if (pin) localStorage.setItem('cannoli_pin', pin)
   else localStorage.removeItem('cannoli_pin')
 }
@@ -46,7 +47,9 @@ export function setCredentials(host: string, pin: string) {
 export function setBaseUrlOnly(host: string) {
   baseUrl.value = normalizeBaseUrl(host)
   token.value = ''
+  authRequired.value = false
   localStorage.setItem('cannoli_host', host)
+  localStorage.setItem('cannoli_pinless', '1')
   localStorage.removeItem('cannoli_pin')
 }
 
@@ -55,6 +58,10 @@ export function restoreCredentials(): boolean {
   const pin = localStorage.getItem('cannoli_pin')
   if (host && pin) {
     setCredentials(host, pin)
+    return true
+  }
+  if (host && localStorage.getItem('cannoli_pinless')) {
+    setBaseUrlOnly(host)
     return true
   }
   return false
@@ -88,6 +95,7 @@ export function clearCredentials() {
   baseUrl.value = ''
   authRequired.value = null
   localStorage.removeItem('cannoli_pin')
+  localStorage.removeItem('cannoli_pinless')
 }
 
 function buildPath(resource: string, ...segments: (string | undefined)[]): string {
@@ -422,8 +430,7 @@ export function uploadApk(
   file: File,
   onProgress?: (pct: number) => void,
 ): { promise: Promise<{ ok: boolean; installId: string }>; abort: () => void } {
-  const { promise, abort } = uploadFiles('apk', [], [file], onProgress)
-  return { promise: promise as unknown as Promise<{ ok: boolean; installId: string }>, abort }
+  return uploadFiles<{ ok: boolean; installId: string }>('apk', [], [file], onProgress)
 }
 
 export async function getApkStatus(installId: string): Promise<ApkStatus> {
@@ -431,12 +438,12 @@ export async function getApkStatus(installId: string): Promise<ApkStatus> {
   return res.json()
 }
 
-export function uploadFiles(
+export function uploadFiles<T = { ok: boolean; files: string[] }>(
   resource: string,
   subpath: string[],
   files: File[],
   onProgress?: (pct: number) => void,
-): { promise: Promise<{ ok: boolean; files: string[] }>; abort: () => void } {
+): { promise: Promise<T>; abort: () => void } {
   const path = buildPath(resource, ...subpath)
 
   const formData = new FormData()
@@ -446,7 +453,7 @@ export function uploadFiles(
 
   const xhr = new XMLHttpRequest()
 
-  const promise = new Promise<{ ok: boolean; files: string[] }>((resolve, reject) => {
+  const promise = new Promise<T>((resolve, reject) => {
     xhr.open('POST', `${baseUrl.value}${path}`)
     if (token.value) xhr.setRequestHeader('Authorization', `Basic ${token.value}`)
 

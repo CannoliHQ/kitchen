@@ -23,15 +23,15 @@ function submit() {
 </script>
 
 <template>
-  <Modal title="Rename" @close="$emit('close')">
+  <Modal :title="$t('common.rename')" @close="$emit('close')">
     <Input
       v-model="name"
-      placeholder="Name"
+      :placeholder="$t('dialogs.name')"
       @keydown.enter="submit"
     />
     <template #footer>
-      <Button variant="ghost" @click="$emit('close')">Cancel</Button>
-      <Button :disabled="!name.trim() || name.trim() === props.currentName" @click="submit">Rename</Button>
+      <Button variant="ghost" @click="$emit('close')">{{ $t('common.cancel') }}</Button>
+      <Button :disabled="!name.trim() || name.trim() === props.currentName" @click="submit">{{ $t('common.rename') }}</Button>
     </template>
   </Modal>
 </template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Check, Folder } from 'lucide-vue-next'
 import type { GameRow } from '@/api/client'
 import { folderLeaf } from '@/lib/folders'
@@ -21,6 +23,8 @@ const emit = defineEmits<{
   'long-press-game': [id: number]
   'long-press-folder': [path: string]
 }>()
+
+const { t } = useI18n()
 
 const LONG_PRESS_MS = 450
 let pressTimer: number | null = null
@@ -52,23 +56,23 @@ function consumeFired(): boolean {
 }
 
 function formatPlayed(ms: number | null | undefined) {
-  if (!ms) return 'Never'
+  if (!ms) return t('platform.playedNever')
   const diff = Date.now() - ms
   const day = 86400000
-  if (diff < day) return 'Today'
-  if (diff < 2 * day) return 'Yesterday'
+  if (diff < day) return t('platform.playedToday')
+  if (diff < 2 * day) return t('platform.playedYesterday')
   const days = Math.floor(diff / day)
-  if (days < 30) return `${days}d ago`
+  if (days < 30) return t('platform.playedDaysAgo', { days })
   return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-const columns: { key: string; label: string; align: string }[] = [
-  { key: 'title', label: 'Title', align: 'text-left' },
-  { key: 'saves', label: 'Saves', align: 'text-center' },
-  { key: 'states', label: 'States', align: 'text-center' },
-  { key: 'guides', label: 'Guides', align: 'text-center' },
-  { key: 'played', label: 'Last Played', align: 'text-right' },
-]
+const columns = computed<{ key: string; label: string; align: string }[]>(() => [
+  { key: 'title', label: t('platform.colTitle'), align: 'text-left' },
+  { key: 'saves', label: t('platform.colSaves'), align: 'text-center' },
+  { key: 'states', label: t('platform.colStates'), align: 'text-center' },
+  { key: 'guides', label: t('platform.colGuides'), align: 'text-center' },
+  { key: 'played', label: t('platform.colLastPlayed'), align: 'text-right' },
+])
 </script>
 
 <template>
@@ -102,7 +106,7 @@ const columns: { key: string; label: string; align: string }[] = [
           @contextmenu.prevent
         >
           <td v-if="selectMode" class="px-3 py-2.5 text-center">
-            <span class="inline-flex h-4 w-4 items-center justify-center rounded border border-border" :class="selectedFolderPaths?.has(folder) ? 'bg-accent border-accent' : ''">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded border-2 border-foreground/40" :class="selectedFolderPaths?.has(folder) ? 'bg-accent border-accent' : ''">
               <Check v-if="selectedFolderPaths?.has(folder)" class="h-3 w-3 text-accent-foreground" />
             </span>
           </td>
@@ -130,7 +134,7 @@ const columns: { key: string; label: string; align: string }[] = [
           @contextmenu.prevent
         >
           <td v-if="selectMode" class="px-3 py-2.5 text-center">
-            <span class="inline-flex h-4 w-4 items-center justify-center rounded border border-border" :class="selectedGameIds?.has(g.id) ? 'bg-accent border-accent' : ''">
+            <span class="inline-flex h-4 w-4 items-center justify-center rounded border-2 border-foreground/40" :class="selectedGameIds?.has(g.id) ? 'bg-accent border-accent' : ''">
               <Check v-if="selectedGameIds?.has(g.id)" class="h-3 w-3 text-accent-foreground" />
             </span>
           </td>

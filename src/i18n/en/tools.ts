@@ -1,0 +1,18 @@
+export default {
+  fileManager: 'File Manager',
+  apkInstaller: 'APK Installer',
+  loadingVolumes: 'Loading volumes...',
+  noVolumes: 'No storage volumes found.',
+  volumeFreeOfTotal: '{free} free of {total}',
+  dropApk: 'Drop an APK here, or click to choose one',
+  confirmOnDevice: 'You will confirm the install on the device.',
+  onlyApkFiles: 'Only .apk files can be installed.',
+  uploadFailed: 'Upload failed.',
+  installFailed: 'Install failed.',
+  uploadingFile: 'Uploading {file}...',
+  waitingForConfirmation: 'Waiting for confirmation on the device',
+  confirmInstallPrompt: 'Confirm the install prompt on your device.',
+  fileInstalled: '{file} installed',
+  installAnother: 'Install another',
+  tryAgain: 'Try again',
+}

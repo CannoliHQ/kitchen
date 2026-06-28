@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, getGames, moveGame, renameGame, type GameDetail } from '@/api/client'
 import { platformName } from '@/api/platforms'
 import { coverColor, coverColorDark } from '@/lib/coverColor'
@@ -25,6 +26,7 @@ const TAB_KEYS: readonly TabKey[] = ['rom', 'saves', 'states', 'guides']
 const props = defineProps<{ tag: string; id: string; tab?: string }>()
 const romId = computed(() => Number(props.id))
 const router = useRouter()
+const { t } = useI18n()
 
 const game = ref<GameDetail | null>(null)
 
@@ -81,23 +83,23 @@ const heroStyle = computed(() => {
 
 const lastPlayed = computed(() => {
   const ms = game.value?.lastPlayedAt
-  if (!ms) return 'Never played'
+  if (!ms) return t('game.neverPlayed')
   const diff = Date.now() - ms
   const day = 86400000
-  if (diff < day) return 'Last played today'
-  if (diff < 2 * day) return 'Last played yesterday'
+  if (diff < day) return t('game.lastPlayedToday')
+  if (diff < 2 * day) return t('game.lastPlayedYesterday')
   const days = Math.floor(diff / day)
-  if (days < 30) return `Last played ${days}d ago`
-  return `Last played ${new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
+  if (days < 30) return t('game.lastPlayedDaysAgo', { n: days })
+  return t('game.lastPlayedOn', { date: new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) })
 })
 
 const tabs = computed(() => {
   const g = game.value
   return [
-    { key: 'rom' as TabKey, label: 'ROM', count: null as number | null },
-    { key: 'saves' as TabKey, label: 'Saves', count: g?.savesCount ?? 0 },
-    { key: 'states' as TabKey, label: 'Save States', count: g?.statesCount ?? 0 },
-    { key: 'guides' as TabKey, label: 'Guides', count: g?.guidesCount ?? 0 },
+    { key: 'rom' as TabKey, label: t('game.tabGameFiles'), count: null as number | null },
+    { key: 'saves' as TabKey, label: t('game.tabSaves'), count: g?.savesCount ?? 0 },
+    { key: 'states' as TabKey, label: t('game.tabSaveStates'), count: g?.statesCount ?? 0 },
+    { key: 'guides' as TabKey, label: t('game.tabGuides'), count: g?.guidesCount ?? 0 },
   ]
 })
 
@@ -124,7 +126,7 @@ async function loadGame() {
   try {
     game.value = await getGame(props.tag, romId.value)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load game'
+    error.value = e instanceof Error ? e.message : t('game.loadFailed')
   } finally {
     loading.value = false
   }
@@ -149,20 +151,20 @@ async function onUploadArt() {
     await uploadGameArt(props.tag, romId.value, file)
     setArt(await gameArtBlob(props.tag, romId.value))
   } catch {
-    error.value = 'Box art upload failed'
+    error.value = t('game.artUploadFailed')
   } finally {
     artBusy.value = false
   }
 }
 
 async function onDeleteArt() {
-  if (!await confirm({ title: 'Delete box art?', confirmLabel: 'Delete', destructive: true })) return
+  if (!await confirm({ title: t('game.deleteBoxArtTitle'), confirmLabel: t('common.delete'), destructive: true })) return
   artBusy.value = true
   try {
     await deleteGameArt(props.tag, romId.value)
     setArt(null)
   } catch {
-    error.value = 'Box art delete failed'
+    error.value = t('game.artDeleteFailed')
   } finally {
     artBusy.value = false
   }
@@ -174,7 +176,7 @@ async function confirmDelete() {
     await deleteGame(props.tag, romId.value, purge.value)
     router.push(backRoute())
   } catch {
-    error.value = 'Failed to delete game'
+    error.value = t('game.deleteGameFailed')
     deleting.value = false
     showDelete.value = false
   }
@@ -185,7 +187,7 @@ async function openMove() {
     const res = await getGames(props.tag)
     platformFolders.value = res.folders
   } catch {
-    error.value = 'Failed to load folders'
+    error.value = t('game.loadFoldersFailed')
     return
   }
   showMove.value = true
@@ -193,16 +195,16 @@ async function openMove() {
 
 const actionItems = computed<DropdownItem[]>(() => {
   const items: DropdownItem[] = [
-    { label: 'Move', icon: MoveRight, onSelect: openMove },
-    { label: 'Rename', icon: Pencil, onSelect: () => { showRename.value = true } },
+    { label: t('common.move'), icon: MoveRight, onSelect: openMove },
+    { label: t('common.rename'), icon: Pencil, onSelect: () => { showRename.value = true } },
   ]
   if (game.value?.hasArt) {
     items.push(
-      { label: 'Replace art', icon: ImagePlus, onSelect: onUploadArt },
-      { label: 'Remove art', icon: ImageOff, danger: true, onSelect: onDeleteArt },
+      { label: t('game.replaceArt'), icon: ImagePlus, onSelect: onUploadArt },
+      { label: t('game.removeArt'), icon: ImageOff, danger: true, onSelect: onDeleteArt },
     )
   }
-  items.push({ label: 'Delete', icon: Trash2, danger: true, onSelect: () => { purge.value = false; showDelete.value = true } })
+  items.push({ label: t('common.delete'), icon: Trash2, danger: true, onSelect: () => { purge.value = false; showDelete.value = true } })
   return items
 })
 
@@ -211,7 +213,7 @@ async function onMoveGame(target: string) {
     await moveGame(props.tag, romId.value, target)
     await loadGame()
   } catch {
-    error.value = 'Failed to move game'
+    error.value = t('game.moveGameFailed')
   } finally {
     showMove.value = false
   }
@@ -222,7 +224,7 @@ async function onRenameGame(newName: string) {
     await renameGame(props.tag, romId.value, newName)
     await loadGame()
   } catch {
-    error.value = 'Failed to rename game'
+    error.value = t('game.renameGameFailed')
   } finally {
     showRename.value = false
   }
@@ -238,10 +240,10 @@ onBeforeUnmount(() => {
   <div class="mx-auto max-w-[1600px] p-6">
     <AppHeader class="mb-6" />
 
-    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="text-base py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
-      <Button variant="outline" size="sm" @click="loadGame">Retry</Button>
+      <Button variant="outline" size="sm" @click="loadGame">{{ $t('common.retry') }}</Button>
     </div>
     <template v-else-if="game">
       <div class="flex items-center justify-between gap-3 mb-4">
@@ -275,7 +277,7 @@ onBeforeUnmount(() => {
               @click="onUploadArt"
             >
               <ImagePlus class="h-7 w-7" />
-              <span class="text-xs font-semibold">Add box art</span>
+              <span class="text-xs font-semibold">{{ $t('game.addBoxArt') }}</span>
             </button>
             <div class="min-w-0 pb-1">
               <h1 class="text-3xl font-extrabold tracking-tight text-white break-words">{{ game.displayName }}</h1>
@@ -336,18 +338,18 @@ onBeforeUnmount(() => {
         @rename="onRenameGame"
       />
 
-      <Modal v-if="showDelete" title="Delete game?" @close="showDelete = false">
+      <Modal v-if="showDelete" :title="$t('game.deleteGameTitle')" @close="showDelete = false">
         <p class="text-sm text-foreground/70 mt-1">
-          {{ game.displayName }} will be removed from the library.
+          {{ $t('game.deleteGameBody', { name: game.displayName }) }}
         </p>
         <label class="flex items-center gap-2.5 text-sm text-foreground/85 cursor-pointer">
           <input type="checkbox" v-model="purge" class="h-4 w-4 accent-destructive" />
-          Also delete saves, save states, box art, and guides
+          {{ $t('game.deleteGamePurgeLabel') }}
         </label>
         <template #footer>
-          <Button variant="ghost" :disabled="deleting" @click="showDelete = false">Cancel</Button>
+          <Button variant="ghost" :disabled="deleting" @click="showDelete = false">{{ $t('common.cancel') }}</Button>
           <Button variant="destructive" :disabled="deleting" @click="confirmDelete">
-            {{ deleting ? 'Deleting...' : 'Delete' }}
+            {{ deleting ? $t('game.deleting') : $t('common.delete') }}
           </Button>
         </template>
       </Modal>

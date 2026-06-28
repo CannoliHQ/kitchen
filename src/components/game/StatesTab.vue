@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   listGameStates, deleteGameState, uploadGameState, downloadGameState, downloadGameStatesZip, gameStateThumbnailBlob,
   type SlotInfo,
@@ -10,6 +11,7 @@ import Button from '@/components/ui/Button.vue'
 import { Download, Upload, Trash2, Archive, Check } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; id: number; romName: string }>()
+const { t } = useI18n()
 
 const slots = ref<SlotInfo[]>([])
 const loading = ref(true)
@@ -53,7 +55,7 @@ async function load(silent = false) {
     thumbs.value = next
     for (const url of previous.values()) URL.revokeObjectURL(url)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load save states'
+    error.value = e instanceof Error ? e.message : t('game.loadStatesFailed')
   } finally {
     if (!silent) loading.value = false
   }
@@ -71,7 +73,7 @@ async function onDownload(s: SlotInfo) {
   try {
     await downloadGameState(props.tag, props.id, s.slot, stateFileName(s.slot))
   } catch {
-    rowError.value.set(s.slot, 'Download failed')
+    rowError.value.set(s.slot, t('game.downloadFailed'))
   }
 }
 
@@ -85,7 +87,7 @@ function pickFile(): Promise<File | null> {
 }
 
 async function onUpload(s: SlotInfo) {
-  if (s.exists && !await confirm({ title: `Replace ${s.label}?`, confirmLabel: 'Replace' })) return
+  if (s.exists && !await confirm({ title: t('game.replaceSlotTitle', { label: s.label }), confirmLabel: t('game.replace') })) return
   const file = await pickFile()
   if (!file) return
   busy.value = true
@@ -94,21 +96,21 @@ async function onUpload(s: SlotInfo) {
     await uploadGameState(props.tag, props.id, s.slot, file)
     await load(true)
   } catch {
-    rowError.value.set(s.slot, 'Upload failed')
+    rowError.value.set(s.slot, t('game.uploadFailed'))
   } finally {
     busy.value = false
   }
 }
 
 async function onDelete(s: SlotInfo) {
-  if (!await confirm({ title: `Delete ${s.label}?`, confirmLabel: 'Delete', destructive: true })) return
+  if (!await confirm({ title: t('game.deleteSlotTitle', { label: s.label }), confirmLabel: t('common.delete'), destructive: true })) return
   busy.value = true
   rowError.value.delete(s.slot)
   try {
     await deleteGameState(props.tag, props.id, s.slot)
     await load(true)
   } catch {
-    rowError.value.set(s.slot, 'Delete failed')
+    rowError.value.set(s.slot, t('game.deleteFailed'))
   } finally {
     busy.value = false
   }
@@ -117,13 +119,13 @@ async function onDelete(s: SlotInfo) {
 async function onDeleteSelected() {
   const count = selected.value.size
   if (!count) return
-  if (!await confirm({ title: `Delete ${count} save state${count === 1 ? '' : 's'}?`, confirmLabel: 'Delete', destructive: true })) return
+  if (!await confirm({ title: t('game.deleteStatesTitle', { n: count }, count), confirmLabel: t('common.delete'), destructive: true })) return
   busy.value = true
   error.value = null
   try {
     await Promise.all([...selected.value].map(slot => deleteGameState(props.tag, props.id, slot)))
   } catch {
-    error.value = 'One or more deletes failed'
+    error.value = t('game.deleteSelectedFailed')
   } finally {
     busy.value = false
     await load(true)
@@ -135,7 +137,7 @@ async function onDownloadZip() {
   try {
     await downloadGameStatesZip(props.tag, props.id, `${romBase.value} save states.zip`)
   } catch {
-    error.value = 'ZIP download failed'
+    error.value = t('game.zipDownloadFailed')
   }
 }
 
@@ -147,7 +149,7 @@ onBeforeUnmount(clearThumbs)
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-3">
       <div class="text-base font-semibold text-foreground/85">
-        Save States ({{ occupiedCount }} of {{ slots.length }})
+        {{ $t('game.saveStatesCount', { n: occupiedCount, total: slots.length }) }}
       </div>
       <div class="flex gap-2">
         <Button
@@ -156,18 +158,18 @@ onBeforeUnmount(clearThumbs)
           :disabled="busy"
           @click="onDeleteSelected"
         >
-          <Trash2 class="h-4 w-4 mr-1.5" /> Delete selected ({{ selected.size }})
+          <Trash2 class="h-4 w-4 mr-1.5" /> {{ $t('game.deleteSelected', { n: selected.size }) }}
         </Button>
         <Button variant="outline" :disabled="busy || !occupiedCount" @click="onDownloadZip">
-          <Archive class="h-4 w-4 mr-1.5" /> Download all (ZIP)
+          <Archive class="h-4 w-4 mr-1.5" /> {{ $t('game.downloadAllZip') }}
         </Button>
       </div>
     </div>
 
-    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
-      <Button variant="outline" size="sm" @click="load">Retry</Button>
+      <Button variant="outline" size="sm" @click="load">{{ $t('common.retry') }}</Button>
     </div>
 
     <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -189,7 +191,7 @@ onBeforeUnmount(clearThumbs)
             :alt="s.label"
             class="h-full w-full object-cover"
           />
-          <span v-else class="text-sm text-muted-foreground">{{ s.exists ? 'No preview' : 'Empty' }}</span>
+          <span v-else class="text-sm text-muted-foreground">{{ s.exists ? $t('game.noPreview') : $t('game.empty') }}</span>
           <div
             v-if="selected.has(s.slot)"
             class="absolute top-2 left-2 h-6 w-6 rounded bg-accent flex items-center justify-center"
@@ -209,7 +211,7 @@ onBeforeUnmount(clearThumbs)
             <button
               class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-40"
               :disabled="busy"
-              title="Download"
+              :title="$t('common.download')"
               @click="onDownload(s)"
             >
               <Download class="h-5 w-5" />
@@ -217,7 +219,7 @@ onBeforeUnmount(clearThumbs)
             <button
               class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-40"
               :disabled="busy"
-              title="Replace"
+              :title="$t('game.replace')"
               @click="onUpload(s)"
             >
               <Upload class="h-5 w-5" />
@@ -225,7 +227,7 @@ onBeforeUnmount(clearThumbs)
             <button
               class="p-2 rounded text-foreground/70 hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
               :disabled="busy"
-              title="Delete"
+              :title="$t('common.delete')"
               @click="onDelete(s)"
             >
               <Trash2 class="h-5 w-5" />
@@ -237,7 +239,7 @@ onBeforeUnmount(clearThumbs)
             :disabled="busy"
             @click="onUpload(s)"
           >
-            <Upload class="h-5 w-5" /> Upload
+            <Upload class="h-5 w-5" /> {{ $t('common.upload') }}
           </button>
         </div>
         <p v-if="rowError.get(s.slot)" class="text-sm text-destructive text-center pt-1">{{ rowError.get(s.slot) }}</p>

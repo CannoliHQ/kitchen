@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { listGameRoms, downloadGameRomFile, type GameRomFile } from '@/api/client'
 import { formatSize } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import { Gamepad2, Download } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; id: number }>()
+const { t } = useI18n()
 
 const files = ref<GameRomFile[]>([])
 const loading = ref(true)
@@ -17,7 +19,7 @@ async function load() {
   try {
     files.value = await listGameRoms(props.tag, props.id)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load ROM files'
+    error.value = e instanceof Error ? e.message : t('game.loadRomsFailed')
   } finally {
     loading.value = false
   }
@@ -26,7 +28,7 @@ async function load() {
 async function onDownload(f: GameRomFile) {
   try {
     await downloadGameRomFile(props.tag, props.id, f.path, f.name)
-  } catch { error.value = 'Download failed' }
+  } catch { error.value = t('game.downloadFailed') }
 }
 
 onMounted(load)
@@ -35,15 +37,15 @@ onMounted(load)
 <template>
   <div class="space-y-3">
     <div class="text-base font-semibold text-foreground/85">
-      ROM file{{ files.length === 1 ? '' : 's' }} ({{ files.length }})
+      {{ $t('game.romFiles', { n: files.length }, files.length) }}
     </div>
 
-    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
-      <Button variant="outline" size="sm" @click="load">Retry</Button>
+      <Button variant="outline" size="sm" @click="load">{{ $t('common.retry') }}</Button>
     </div>
-    <p v-else-if="!files.length" class="text-base text-foreground/75">No ROM files.</p>
+    <p v-else-if="!files.length" class="text-base text-foreground/75 py-8 text-center">{{ $t('game.noRoms') }}</p>
 
     <div v-else class="space-y-2">
       <div
@@ -60,7 +62,7 @@ onMounted(load)
         </div>
         <button
           class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground shrink-0"
-          title="Download"
+          :title="$t('common.download')"
           @click="onDownload(f)"
         >
           <Download class="h-4 w-4" />

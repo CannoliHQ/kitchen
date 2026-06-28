@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { gameGuideBlob, getGame, downloadGameGuide, type GameDetail } from '@/api/client'
 import { platformName } from '@/api/platforms'
 import AppHeader from '@/components/layout/AppHeader.vue'
@@ -10,6 +11,7 @@ import { Download, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; id: string; file: string }>()
 
+const { t } = useI18n()
 const gameId = computed(() => Number(props.id))
 const game = ref<GameDetail | null>(null)
 const loading = ref(true)
@@ -19,9 +21,9 @@ const contentType = ref('')
 const downloadError = ref('')
 
 const crumbs = computed<Crumb[]>(() => [
-  { label: 'Platforms', to: { name: 'dashboard' } },
+  { label: t('browse.guideViewer.platforms'), to: { name: 'dashboard' } },
   { label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag } } },
-  { label: game.value?.displayName ?? 'Game', to: { name: 'game', params: { tag: props.tag, id: props.id, tab: 'guides' } } },
+  { label: game.value?.displayName ?? t('browse.guideViewer.game'), to: { name: 'game', params: { tag: props.tag, id: props.id, tab: 'guides' } } },
   { label: props.file },
 ])
 
@@ -36,7 +38,7 @@ async function load() {
     blobUrl.value = url
     contentType.value = type
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load guide'
+    error.value = e instanceof Error ? e.message : t('browse.guideViewer.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -47,7 +49,7 @@ async function onDownload() {
   try {
     await downloadGameGuide(props.tag, gameId.value, props.file)
   } catch {
-    downloadError.value = 'Download failed.'
+    downloadError.value = t('browse.guideViewer.downloadFailed')
   }
 }
 
@@ -65,20 +67,20 @@ onBeforeUnmount(() => { if (blobUrl.value) URL.revokeObjectURL(blobUrl.value) })
       <div class="flex items-center gap-2 shrink-0">
         <span v-if="downloadError" class="text-xs text-destructive">{{ downloadError }}</span>
         <Button variant="outline" size="sm" @click="onDownload">
-          <Download class="h-4 w-4 mr-1.5" /> Download
+          <Download class="h-4 w-4 mr-1.5" /> {{ $t('common.download') }}
         </Button>
       </div>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-      <Loader2 class="h-5 w-5 animate-spin" /> Loading guide...
+      <Loader2 class="h-5 w-5 animate-spin" /> {{ $t('browse.guideViewer.loadingGuide') }}
     </div>
 
     <div v-else-if="error" class="py-16 text-center space-y-3">
       <p class="text-destructive">{{ error }}</p>
       <div class="flex items-center justify-center gap-2">
-        <Button variant="outline" size="sm" @click="load">Retry</Button>
-        <Button variant="outline" size="sm" @click="onDownload">Download instead</Button>
+        <Button variant="outline" size="sm" @click="load">{{ $t('common.retry') }}</Button>
+        <Button variant="outline" size="sm" @click="onDownload">{{ $t('browse.guideViewer.downloadInstead') }}</Button>
       </div>
     </div>
 

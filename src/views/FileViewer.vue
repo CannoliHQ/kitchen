@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { RouteLocationRaw } from 'vue-router'
 import { fileBlob, downloadToDisk } from '@/api/client'
 import AppHeader from '@/components/layout/AppHeader.vue'
@@ -22,6 +23,7 @@ const error = ref<string | null>(null)
 const blobUrl = ref<string | null>(null)
 const contentType = ref('')
 const downloadError = ref('')
+const { t } = useI18n()
 
 const pathSegs = computed(() => (props.path ? props.path.split('/').filter(Boolean) : []))
 const segments = computed(() => [props.tag, ...pathSegs.value, props.name].filter(Boolean) as string[])
@@ -51,7 +53,7 @@ async function load() {
   error.value = null
   if (blobUrl.value) { URL.revokeObjectURL(blobUrl.value); blobUrl.value = null }
   if (!props.resource || !props.name) {
-    error.value = 'Nothing to preview.'
+    error.value = t('browse.fileViewer.nothingToPreview')
     loading.value = false
     return
   }
@@ -60,7 +62,7 @@ async function load() {
     blobUrl.value = url
     contentType.value = type
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load file'
+    error.value = e instanceof Error ? e.message : t('browse.fileViewer.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -71,7 +73,7 @@ async function onDownload() {
   try {
     await downloadToDisk(props.resource, segments.value, props.name)
   } catch {
-    downloadError.value = 'Download failed.'
+    downloadError.value = t('browse.fileViewer.downloadFailed')
   }
 }
 
@@ -89,20 +91,20 @@ onBeforeUnmount(() => { if (blobUrl.value) URL.revokeObjectURL(blobUrl.value) })
       <div class="flex items-center gap-2 shrink-0">
         <span v-if="downloadError" class="text-xs text-destructive">{{ downloadError }}</span>
         <Button variant="outline" size="sm" @click="onDownload">
-          <Download class="h-4 w-4 mr-1.5" /> Download
+          <Download class="h-4 w-4 mr-1.5" /> {{ $t('common.download') }}
         </Button>
       </div>
     </div>
 
     <div v-if="loading" class="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-      <Loader2 class="h-5 w-5 animate-spin" /> Loading file...
+      <Loader2 class="h-5 w-5 animate-spin" /> {{ $t('browse.fileViewer.loadingFile') }}
     </div>
 
     <div v-else-if="error" class="py-16 text-center space-y-3">
       <p class="text-destructive">{{ error }}</p>
       <div class="flex items-center justify-center gap-2">
-        <Button variant="outline" size="sm" @click="load">Retry</Button>
-        <Button variant="outline" size="sm" @click="onDownload">Download instead</Button>
+        <Button variant="outline" size="sm" @click="load">{{ $t('common.retry') }}</Button>
+        <Button variant="outline" size="sm" @click="onDownload">{{ $t('browse.fileViewer.downloadInstead') }}</Button>
       </div>
     </div>
 

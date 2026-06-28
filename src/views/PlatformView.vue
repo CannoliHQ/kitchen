@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { uploadFiles } from '@/api/client'
 import { platformName, supportsFbneoSamples } from '@/api/platforms'
 import Dropdown from '@/components/ui/Dropdown.vue'
@@ -18,6 +19,7 @@ const SAMPLES_SUBPATH = ['fbneo', 'samples']
 
 const props = defineProps<{ tag: string; tab?: string; folder?: string }>()
 const router = useRouter()
+const { t } = useI18n()
 
 const activeTab = computed<TabKey>(() => {
   const t = TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'games'
@@ -25,7 +27,7 @@ const activeTab = computed<TabKey>(() => {
 })
 
 const crumbs = computed<Crumb[]>(() => {
-  const items: Crumb[] = [{ label: 'Platforms', to: { name: 'dashboard' } }]
+  const items: Crumb[] = [{ label: t('platform.crumbPlatforms'), to: { name: 'dashboard' } }]
   const folder = props.folder
   if (folder) {
     items.push({ label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag } } })
@@ -45,11 +47,11 @@ const crumbs = computed<Crumb[]>(() => {
 
 const tabs = computed(() => {
   const list: { key: TabKey; label: string }[] = [
-    { key: 'games', label: 'Games' },
-    { key: 'overlays', label: 'Overlays' },
-    { key: 'bios', label: 'BIOS' },
+    { key: 'games', label: t('platform.tabGames') },
+    { key: 'overlays', label: t('platform.tabOverlays') },
+    { key: 'bios', label: t('platform.tabBios') },
   ]
-  if (supportsFbneoSamples(props.tag)) list.push({ key: 'samples', label: 'Samples' })
+  if (supportsFbneoSamples(props.tag)) list.push({ key: 'samples', label: t('platform.tabSamples') })
   return list
 })
 
@@ -93,7 +95,7 @@ async function doBulkArtUpload(files: File[]) {
       await promise
     }
   } catch {
-    bulkArtError.value = 'Bulk art upload failed'
+    bulkArtError.value = t('platform.bulkArtUploadFailed')
   } finally {
     bulkArtUploading.value = false
   }
@@ -109,23 +111,23 @@ function handleBulkArtFiles(event: Event) {
 const actionItems = computed<DropdownItem[]>(() => {
   if (activeTab.value === 'games') {
     return [
-      { label: 'New Folder', icon: FolderPlus, onSelect: () => gamesTabRef.value?.triggerNewFolder() },
-      { label: 'Upload ROMs', icon: Gamepad2, onSelect: () => gamesTabRef.value?.triggerRomUpload() },
-      { label: 'Bulk Art Upload', icon: Image, onSelect: () => bulkArtInput.value?.click() },
+      { label: t('platform.newFolder'), icon: FolderPlus, onSelect: () => gamesTabRef.value?.triggerNewFolder() },
+      { label: t('platform.uploadRoms'), icon: Gamepad2, onSelect: () => gamesTabRef.value?.triggerRomUpload() },
+      { label: t('platform.bulkArtUpload'), icon: Image, onSelect: () => bulkArtInput.value?.click() },
     ]
   }
   if (activeTab.value === 'overlays') {
     return [
-      { label: 'Upload Overlay', icon: Layers, onSelect: () => overlaysTabRef.value?.triggerUpload() },
+      { label: t('platform.uploadOverlay'), icon: Layers, onSelect: () => overlaysTabRef.value?.triggerUpload() },
     ]
   }
   if (activeTab.value === 'samples') {
     return [
-      { label: 'Upload Sample', icon: Music, onSelect: () => samplesTabRef.value?.triggerUpload() },
+      { label: t('platform.uploadSample'), icon: Music, onSelect: () => samplesTabRef.value?.triggerUpload() },
     ]
   }
   return [
-    { label: 'Upload BIOS', icon: Cpu, onSelect: () => biosTabRef.value?.triggerUpload() },
+    { label: t('platform.uploadBios'), icon: Cpu, onSelect: () => biosTabRef.value?.triggerUpload() },
   ]
 })
 </script>
@@ -146,11 +148,11 @@ const actionItems = computed<DropdownItem[]>(() => {
     <div v-if="bulkArtUploading" class="rounded-lg border border-border bg-card p-3 space-y-2">
       <div class="flex items-center justify-between text-sm">
         <span class="text-foreground font-medium truncate">
-          <Upload class="inline h-3.5 w-3.5 mr-1 -mt-0.5" />{{ bulkArtName }}<span v-if="bulkArtTotal > 1" class="text-foreground/60 font-normal"> ({{ bulkArtCurrent }} of {{ bulkArtTotal }})</span>
+          <Upload class="inline h-3.5 w-3.5 mr-1 -mt-0.5" />{{ bulkArtName }}<span v-if="bulkArtTotal > 1" class="text-foreground/60 font-normal"> {{ $t('platform.uploadCount', { current: bulkArtCurrent, total: bulkArtTotal }) }}</span>
         </span>
         <span class="font-mono text-foreground/60 ml-2 shrink-0">{{ bulkArtProgress }}%</span>
       </div>
-      <Progress :value="bulkArtProgress" class="!h-2.5" />
+      <Progress :value="bulkArtProgress" />
     </div>
     <p v-if="bulkArtError" class="text-sm text-destructive">{{ bulkArtError }}</p>
 
@@ -199,7 +201,7 @@ const actionItems = computed<DropdownItem[]>(() => {
         :tag="props.tag"
         resource="bios"
         :sub-path="SAMPLES_SUBPATH"
-        empty-label="No samples yet."
+        :empty-label="$t('platform.noSamplesYet')"
         display="list"
       />
       <ResourceTab

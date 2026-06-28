@@ -39,11 +39,11 @@ function usedPct(v: Volume): number {
       <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard', params: { tab: 'tools' } })">
         <ArrowLeft class="h-5 w-5" />
       </Button>
-      <h1 class="text-2xl font-bold tracking-tight">File Manager</h1>
+      <h1 class="text-2xl font-bold tracking-tight">{{ $t('tools.fileManager') }}</h1>
     </div>
 
-    <p v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Loading volumes...</p>
-    <p v-else-if="!volumes.length" class="text-sm text-muted-foreground py-8 text-center">No storage volumes found.</p>
+    <p v-if="loading" class="text-sm text-muted-foreground py-8 text-center">{{ $t('tools.loadingVolumes') }}</p>
+    <p v-else-if="!volumes.length" class="text-sm text-muted-foreground py-8 text-center">{{ $t('tools.noVolumes') }}</p>
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <button
         v-for="v in volumes"
@@ -53,7 +53,7 @@ function usedPct(v: Volume): number {
       >
         <h3 class="text-base font-semibold">{{ v.label }}</h3>
         <p class="mt-1 text-sm text-muted-foreground">
-          {{ formatSize(v.freeBytes) }} free of {{ formatSize(v.totalBytes) }}
+          {{ $t('tools.volumeFreeOfTotal', { free: formatSize(v.freeBytes), total: formatSize(v.totalBytes) }) }}
         </p>
         <div class="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
           <div class="h-full bg-accent" :style="{ width: `${usedPct(v)}%` }" />

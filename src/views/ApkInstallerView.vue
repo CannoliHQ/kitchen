@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { uploadApk, getApkStatus } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
 import Progress from '@/components/ui/Progress.vue'
@@ -10,6 +11,7 @@ import { ArrowLeft, PackagePlus, CheckCircle2, XCircle, Smartphone } from 'lucid
 type Phase = 'idle' | 'uploading' | 'waiting' | 'success' | 'failure'
 
 const router = useRouter()
+const { t } = useI18n()
 const phase = ref<Phase>('idle')
 const progress = ref(0)
 const error = ref('')
@@ -39,7 +41,7 @@ function onPick(e: Event) {
 
 async function install(file: File) {
   if (!file.name.toLowerCase().endsWith('.apk')) {
-    error.value = 'Only .apk files can be installed.'
+    error.value = t('tools.onlyApkFiles')
     phase.value = 'failure'
     return
   }
@@ -58,7 +60,7 @@ async function install(file: File) {
   } catch {
     abortUpload = null
     if (!uploadCancelled) {
-      error.value = 'Upload failed.'
+      error.value = t('tools.uploadFailed')
       phase.value = 'failure'
     }
   }
@@ -79,7 +81,7 @@ function poll(installId: string) {
         phase.value = 'success'
       } else if (s.status === 'failure') {
         clearInterval(pollTimer)
-        error.value = s.message ?? 'Install failed.'
+        error.value = s.message ?? t('tools.installFailed')
         phase.value = 'failure'
       }
     } catch {
@@ -103,7 +105,7 @@ function reset() {
       <Button variant="ghost" size="icon" @click="router.push({ name: 'dashboard', params: { tab: 'tools' } })">
         <ArrowLeft class="h-5 w-5" />
       </Button>
-      <h1 class="text-2xl font-bold tracking-tight">APK Installer</h1>
+      <h1 class="text-2xl font-bold tracking-tight">{{ $t('tools.apkInstaller') }}</h1>
     </div>
 
     <div
@@ -116,35 +118,35 @@ function reset() {
       @click="fileInput?.click()"
     >
       <PackagePlus class="mx-auto h-10 w-10 text-muted-foreground" />
-      <p class="mt-4 text-sm font-medium">Drop an APK here, or click to choose one</p>
-      <p class="mt-1 text-sm text-muted-foreground">You will confirm the install on the device.</p>
+      <p class="mt-4 text-sm font-medium">{{ $t('tools.dropApk') }}</p>
+      <p class="mt-1 text-sm text-muted-foreground">{{ $t('tools.confirmOnDevice') }}</p>
       <input ref="fileInput" type="file" accept=".apk" class="hidden" @change="onPick" />
     </div>
 
     <div v-else class="rounded-xl border border-border bg-card p-8 space-y-4 text-center">
       <template v-if="phase === 'uploading'">
-        <p class="text-sm font-medium">Uploading {{ fileName }}...</p>
+        <p class="text-sm font-medium">{{ $t('tools.uploadingFile', { file: fileName }) }}</p>
         <Progress :value="progress" />
-        <Button variant="outline" @click="cancelUpload">Cancel</Button>
+        <Button variant="outline" @click="cancelUpload">{{ $t('common.cancel') }}</Button>
       </template>
 
       <template v-else-if="phase === 'waiting'">
         <Smartphone class="mx-auto h-10 w-10 text-accent animate-pulse" />
-        <p class="text-sm font-medium">Waiting for confirmation on the device</p>
-        <p class="text-sm text-muted-foreground">Confirm the install prompt on your device.</p>
+        <p class="text-sm font-medium">{{ $t('tools.waitingForConfirmation') }}</p>
+        <p class="text-sm text-muted-foreground">{{ $t('tools.confirmInstallPrompt') }}</p>
       </template>
 
       <template v-else-if="phase === 'success'">
         <CheckCircle2 class="mx-auto h-10 w-10 text-green-500" />
-        <p class="text-sm font-medium">{{ fileName }} installed</p>
-        <Button variant="outline" @click="reset">Install another</Button>
+        <p class="text-sm font-medium">{{ $t('tools.fileInstalled', { file: fileName }) }}</p>
+        <Button variant="outline" @click="reset">{{ $t('tools.installAnother') }}</Button>
       </template>
 
       <template v-else>
         <XCircle class="mx-auto h-10 w-10 text-destructive" />
-        <p class="text-sm font-medium">Install failed</p>
+        <p class="text-sm font-medium">{{ $t('tools.installFailed') }}</p>
         <p class="text-sm text-muted-foreground">{{ error }}</p>
-        <Button variant="outline" @click="reset">Try again</Button>
+        <Button variant="outline" @click="reset">{{ $t('tools.tryAgain') }}</Button>
       </template>
     </div>
   </div>

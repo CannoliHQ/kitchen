@@ -28,7 +28,7 @@ function goHome() {
     </button>
     <Button variant="ghost" size="sm" @click="disconnect">
       <LogOut class="h-4 w-4" />
-      Disconnect
+      {{ $t('common.disconnect') }}
     </Button>
   </div>
 </template>

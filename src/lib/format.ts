@@ -34,3 +34,10 @@ export function fileExt(name: string): string {
   const i = name.lastIndexOf('.')
   return i >= 0 ? name.slice(i + 1).toLowerCase() : ''
 }
+
+const PREVIEWABLE = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'avif', 'txt', 'md', 'markdown', 'log', 'nfo', 'json', 'csv', 'cfg', 'ini']
+
+/** True when the file type can be shown in the in-app file viewer. */
+export function isPreviewable(name: string): boolean {
+  return PREVIEWABLE.includes(fileExt(name))
+}

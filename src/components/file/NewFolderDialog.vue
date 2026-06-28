@@ -19,15 +19,15 @@ function submit() {
 </script>
 
 <template>
-  <Modal title="New folder" @close="$emit('close')">
+  <Modal :title="$t('common.newFolder')" @close="$emit('close')">
     <Input
       v-model="name"
-      placeholder="Folder name"
+      :placeholder="$t('common.folderName')"
       @keydown.enter="submit"
     />
     <template #footer>
-      <Button variant="ghost" @click="$emit('close')">Cancel</Button>
-      <Button :disabled="!name.trim()" @click="submit">Create</Button>
+      <Button variant="ghost" @click="$emit('close')">{{ $t('common.cancel') }}</Button>
+      <Button :disabled="!name.trim()" @click="submit">{{ $t('common.create') }}</Button>
     </template>
   </Modal>
 </template>

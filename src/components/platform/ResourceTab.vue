@@ -1,12 +1,31 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { listFiles, deleteFile, uploadFiles, resourceFileBlob, type FileEntry } from '@/api/client'
-import { formatSize } from '@/lib/format'
+import { formatSize, isPreviewable } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import Progress from '@/components/ui/Progress.vue'
-import { Check, File as FileIcon, LayoutGrid, Table as TableIcon, Trash2, Upload } from 'lucide-vue-next'
+import { Check, File as FileIcon, LayoutGrid, Table as TableIcon, Trash2, Upload, Eye } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; resource: 'overlays' | 'bios'; display?: 'list' | 'images'; subPath?: string[]; emptyLabel?: string }>()
+
+const router = useRouter()
+const { t } = useI18n()
+const resourceLabel = computed(() => (props.resource === 'overlays' ? t('platform.tabOverlays') : t('platform.tabBios')))
+
+function openView(name: string) {
+  router.push({
+    name: 'file-view',
+    query: {
+      resource: props.resource,
+      tag: props.tag,
+      ...(props.subPath?.length ? { path: props.subPath.join('/') } : {}),
+      name,
+      rlabel: `/${resourceLabel.value}/${props.tag}`,
+    },
+  })
+}
 
 const entries = ref<FileEntry[]>([])
 const loading = ref(true)
@@ -27,7 +46,7 @@ const viewMode = ref<'list' | 'images'>(props.display ?? 'list')
 watch(() => props.display, d => { if (d) viewMode.value = d })
 
 const emptyMessage = computed(() =>
-  props.emptyLabel ?? (props.resource === 'overlays' ? 'No overlays yet.' : 'No BIOS files yet.'),
+  props.emptyLabel ?? (props.resource === 'overlays' ? t('platform.noOverlaysYet') : t('platform.noBiosYet')),
 )
 
 function clearThumbnails() {
@@ -53,7 +72,7 @@ async function load() {
     entries.value = (res.entries ?? []).filter(e => e.type === 'file')
     if (props.display === 'images' || viewMode.value === 'images') await loadThumbnails()
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load files'
+    error.value = e instanceof Error ? e.message : t('platform.loadFilesFailed')
     entries.value = []
   } finally {
     loading.value = false
@@ -71,7 +90,7 @@ async function deleteSelected() {
     for (const name of [...selected]) await deleteFile(props.resource, props.tag, ...(props.subPath ?? []), name)
     await load()
   } catch {
-    error.value = 'Delete failed'
+    error.value = t('platform.deleteFailed')
   } finally {
     deleting.value = false
   }
@@ -83,7 +102,7 @@ async function deleteOne(name: string) {
     await deleteFile(props.resource, props.tag, ...(props.subPath ?? []), name)
     await load()
   } catch {
-    error.value = 'Delete failed'
+    error.value = t('platform.deleteFailed')
   } finally {
     deleting.value = false
   }
@@ -110,7 +129,7 @@ async function doUpload(files: File[]) {
     }
     await load()
   } catch {
-    error.value = 'Upload failed'
+    error.value = t('platform.uploadFailed')
   } finally {
     uploading.value = false
   }
@@ -176,11 +195,11 @@ onBeforeUnmount(() => {
     <div v-if="uploading" class="rounded-lg border border-border bg-card p-3 space-y-2">
       <div class="flex items-center justify-between text-sm">
         <span class="text-foreground font-medium truncate">
-          {{ uploadName }}<span v-if="uploadTotal > 1" class="text-foreground/60 font-normal"> ({{ uploadCurrent }} of {{ uploadTotal }})</span>
+          {{ uploadName }}<span v-if="uploadTotal > 1" class="text-foreground/60 font-normal"> {{ $t('platform.uploadCount', { current: uploadCurrent, total: uploadTotal }) }}</span>
         </span>
         <span class="font-mono text-foreground/60 ml-2 shrink-0">{{ uploadProgress }}%</span>
       </div>
-      <Progress :value="uploadProgress" class="!h-2.5" />
+      <Progress :value="uploadProgress" />
     </div>
 
     <div v-if="resource !== 'bios'" class="flex items-center justify-end gap-2">
@@ -189,7 +208,7 @@ onBeforeUnmount(() => {
           class="p-2 transition-colors"
           :class="viewMode === 'images' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
           :aria-pressed="viewMode === 'images'"
-          title="Image view"
+          :title="$t('platform.imageView')"
           @click="viewMode = 'images'"
         >
           <LayoutGrid class="h-4 w-4" />
@@ -198,7 +217,7 @@ onBeforeUnmount(() => {
           class="p-2 transition-colors border-l border-border"
           :class="viewMode === 'list' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
           :aria-pressed="viewMode === 'list'"
-          title="List view"
+          :title="$t('platform.listView')"
           @click="viewMode = 'list'"
         >
           <TableIcon class="h-4 w-4" />
@@ -210,24 +229,24 @@ onBeforeUnmount(() => {
       v-if="selected.size > 0"
       class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2"
     >
-      <span class="text-sm font-medium text-foreground">{{ selected.size }} selected</span>
+      <span class="text-sm font-medium text-foreground">{{ $t('platform.selectedCount', { n: selected.size }) }}</span>
       <div class="flex items-center gap-2 sm:ml-auto flex-wrap">
         <button
           class="rounded-md border border-destructive/60 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
           :disabled="deleting"
           @click="deleteSelected"
-        >Delete</button>
+        >{{ $t('common.delete') }}</button>
         <button
           class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted"
           @click="selected.clear()"
-        >Clear</button>
+        >{{ $t('platform.clear') }}</button>
       </div>
     </div>
 
-    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="text-base py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
-      <Button variant="outline" size="sm" @click="load">Retry</Button>
+      <Button variant="outline" size="sm" @click="load">{{ $t('common.retry') }}</Button>
     </div>
     <p v-else-if="!entries.length" class="text-base text-foreground/75 py-8 text-center">
       {{ emptyMessage }}
@@ -259,16 +278,26 @@ onBeforeUnmount(() => {
             v-if="selected.has(entry.name)"
             class="absolute top-2 left-2 inline-flex h-5 w-5 items-center justify-center rounded bg-accent"
           >
-            <Check class="h-3 w-3 text-white" />
+            <Check class="h-3 w-3 text-accent-foreground" />
           </div>
-          <button
-            class="absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded bg-black/60 text-white transition-colors hover:bg-destructive disabled:opacity-50"
-            :disabled="deleting"
-            title="Delete"
-            @click.stop="deleteOne(entry.name)"
-          >
-            <Trash2 class="h-3.5 w-3.5" />
-          </button>
+          <div class="absolute top-2 right-2 flex gap-1.5">
+            <button
+              v-if="isPreviewable(entry.name)"
+              class="inline-flex h-7 w-7 items-center justify-center rounded bg-black/60 text-white transition-colors hover:bg-accent hover:text-accent-foreground"
+              :title="$t('common.view')"
+              @click.stop="openView(entry.name)"
+            >
+              <Eye class="h-3.5 w-3.5" />
+            </button>
+            <button
+              class="inline-flex h-7 w-7 items-center justify-center rounded bg-black/60 text-white transition-colors hover:bg-destructive disabled:opacity-50"
+              :disabled="deleting"
+              :title="$t('common.delete')"
+              @click.stop="deleteOne(entry.name)"
+            >
+              <Trash2 class="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
         <div class="mt-1.5 text-xs text-foreground/80 truncate text-center" :title="entry.name">{{ entry.name }}</div>
       </div>
@@ -286,15 +315,23 @@ onBeforeUnmount(() => {
           class="inline-flex h-4 w-4 items-center justify-center rounded border-2 border-foreground/40 shrink-0"
           :class="selected.has(entry.name) ? 'bg-accent border-accent' : ''"
         >
-          <Check v-if="selected.has(entry.name)" class="h-2.5 w-2.5 text-white" />
+          <Check v-if="selected.has(entry.name)" class="h-2.5 w-2.5 text-accent-foreground" />
         </span>
         <FileIcon class="h-4 w-4 text-muted-foreground shrink-0" />
         <span class="flex-1 truncate text-sm">{{ entry.name }}</span>
         <span class="text-xs text-muted-foreground tabular-nums">{{ formatSize(entry.size) }}</span>
         <button
+          v-if="isPreviewable(entry.name)"
+          class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-accent hover:bg-accent/10 transition-colors"
+          :title="$t('common.view')"
+          @click.stop="openView(entry.name)"
+        >
+          <Eye class="h-3.5 w-3.5" />
+        </button>
+        <button
           class="shrink-0 p-1 rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
           :disabled="deleting"
-          title="Delete"
+          :title="$t('common.delete')"
           @click.stop="deleteOne(entry.name)"
         >
           <Trash2 class="h-3.5 w-3.5" />
@@ -307,7 +344,7 @@ onBeforeUnmount(() => {
       class="fixed inset-0 z-50 border-4 border-dashed border-accent bg-background/90 flex flex-col items-center justify-center gap-3 pointer-events-none"
     >
       <Upload class="h-12 w-12 text-accent" />
-      <p class="text-xl font-semibold text-foreground">Drop files to upload</p>
+      <p class="text-xl font-semibold text-foreground">{{ $t('platform.dropFilesToUpload') }}</p>
     </div>
   </div>
 </template>

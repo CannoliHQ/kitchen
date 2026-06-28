@@ -12,11 +12,11 @@ import Modal from '@/components/ui/Modal.vue'
   >
     <p v-if="confirmState.pending.body" class="text-sm text-foreground/80">{{ confirmState.pending.body }}</p>
     <template #footer>
-      <Button variant="ghost" @click="resolveConfirm(false)">{{ confirmState.pending.cancelLabel ?? 'Cancel' }}</Button>
+      <Button variant="ghost" @click="resolveConfirm(false)">{{ confirmState.pending.cancelLabel ?? $t('common.cancel') }}</Button>
       <Button
         :variant="confirmState.pending.destructive ? 'destructive' : 'default'"
         @click="resolveConfirm(true)"
-      >{{ confirmState.pending.confirmLabel ?? 'Confirm' }}</Button>
+      >{{ confirmState.pending.confirmLabel ?? $t('common.confirm') }}</Button>
     </template>
   </Modal>
 </template>

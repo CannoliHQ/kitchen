@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { listGameSaves, downloadGameSave, uploadGameSave, deleteGameSave, type GameFile } from '@/api/client'
 import { confirm } from '@/lib/confirm'
 import { formatSize, formatRelativeTime as formatWhen } from '@/lib/format'
@@ -7,6 +8,7 @@ import Button from '@/components/ui/Button.vue'
 import { Save, Upload, Download, Trash2 } from 'lucide-vue-next'
 
 const props = defineProps<{ tag: string; id: number }>()
+const { t } = useI18n()
 
 const entries = ref<GameFile[]>([])
 const loading = ref(true)
@@ -19,7 +21,7 @@ async function load() {
   try {
     entries.value = await listGameSaves(props.tag, props.id)
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load saves'
+    error.value = e instanceof Error ? e.message : t('game.loadSavesFailed')
   } finally {
     loading.value = false
   }
@@ -43,7 +45,7 @@ async function onUpload() {
     await uploadGameSave(props.tag, props.id, file)
     await load()
   } catch {
-    error.value = 'Upload failed'
+    error.value = t('game.uploadFailed')
   } finally {
     busy.value = false
   }
@@ -52,18 +54,18 @@ async function onUpload() {
 async function onDownload(f: GameFile) {
   try {
     await downloadGameSave(props.tag, props.id, f.name)
-  } catch { error.value = 'Download failed' }
+  } catch { error.value = t('game.downloadFailed') }
 }
 
 async function onDelete(f: GameFile) {
-  if (!await confirm({ title: `Delete ${f.name}?`, confirmLabel: 'Delete', destructive: true })) return
+  if (!await confirm({ title: t('game.deleteFileTitle', { name: f.name }), confirmLabel: t('common.delete'), destructive: true })) return
   busy.value = true
   error.value = null
   try {
     await deleteGameSave(props.tag, props.id, f.name)
     await load()
   } catch {
-    error.value = 'Delete failed'
+    error.value = t('game.deleteFailed')
   } finally {
     busy.value = false
   }
@@ -75,18 +77,18 @@ onMounted(load)
 <template>
   <div class="space-y-3">
     <div class="flex items-center justify-between">
-      <div class="text-base font-semibold text-foreground/85">Saves ({{ entries.length }})</div>
+      <div class="text-base font-semibold text-foreground/85">{{ $t('game.savesCount', { n: entries.length }) }}</div>
       <Button variant="outline" :disabled="busy" @click="onUpload">
-        <Upload class="h-4 w-4 mr-1.5" /> Upload
+        <Upload class="h-4 w-4 mr-1.5" /> {{ $t('common.upload') }}
       </Button>
     </div>
 
-    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading...</p>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('common.loading') }}</p>
     <div v-else-if="error" class="py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
-      <Button variant="outline" size="sm" @click="load">Retry</Button>
+      <Button variant="outline" size="sm" @click="load">{{ $t('common.retry') }}</Button>
     </div>
-    <p v-else-if="!entries.length" class="text-base text-foreground/75">No saves yet.</p>
+    <p v-else-if="!entries.length" class="text-base text-foreground/75 py-8 text-center">{{ $t('game.noSaves') }}</p>
 
     <div v-else class="space-y-2">
       <div
@@ -107,7 +109,7 @@ onMounted(load)
           <button
             class="p-2 rounded text-foreground/70 hover:bg-muted hover:text-foreground disabled:opacity-40"
             :disabled="busy"
-            title="Download"
+            :title="$t('common.download')"
             @click="onDownload(f)"
           >
             <Download class="h-4 w-4" />
@@ -115,7 +117,7 @@ onMounted(load)
           <button
             class="p-2 rounded text-foreground/70 hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
             :disabled="busy"
-            title="Delete"
+            :title="$t('common.delete')"
             @click="onDelete(f)"
           >
             <Trash2 class="h-4 w-4" />

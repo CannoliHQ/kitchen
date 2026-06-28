@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { getGames, uploadFiles, createFolder, moveGame, moveFile, renameGame, deleteGame, deleteFile, type GameRow } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -14,9 +15,11 @@ import MoveDialog from '@/components/file/MoveDialog.vue'
 import RenameDialog from '@/components/file/RenameDialog.vue'
 import { Check, CheckSquare, LayoutGrid, Table as TableIcon, Search, Upload } from 'lucide-vue-next'
 import { folderLeaf } from '@/lib/folders'
+import { useCardSelection } from '@/composables/useCardSelection'
 
 const props = defineProps<{ tag: string; folder: string }>()
 const router = useRouter()
+const { t } = useI18n()
 
 const games = ref<GameRow[]>([])
 const allFolders = ref<string[]>([])
@@ -138,7 +141,7 @@ async function load() {
     games.value = res.games
     allFolders.value = res.folders
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to load games'
+    error.value = e instanceof Error ? e.message : t('platform.loadFailed')
   } finally {
     loading.value = false
   }
@@ -153,71 +156,20 @@ const dragOver = ref(false)
 
 const showNewFolder = ref(false)
 
-const selectMode = ref(false)
-const selectedGameIds = reactive(new Set<number>())
-const selectedFolderPaths = reactive(new Set<string>())
-const selectedCount = computed(() => selectedGameIds.size + selectedFolderPaths.size)
-
-function toggleSelectMode() {
-  selectMode.value = !selectMode.value
-  if (!selectMode.value) {
-    selectedGameIds.clear()
-    selectedFolderPaths.clear()
-  }
-}
-
-function toggleGame(id: number) {
-  if (selectedGameIds.has(id)) selectedGameIds.delete(id)
-  else selectedGameIds.add(id)
-}
-
-function toggleFolder(path: string) {
-  if (selectedFolderPaths.has(path)) selectedFolderPaths.delete(path)
-  else selectedFolderPaths.add(path)
-}
-
-const LONG_PRESS_MS = 450
-let pressTimer: number | null = null
-const pressFired = ref(false)
-
-function cancelPress() {
-  if (pressTimer !== null) {
-    clearTimeout(pressTimer)
-    pressTimer = null
-  }
-}
-
-function startPressGame(id: number) {
-  cancelPress()
-  pressTimer = window.setTimeout(() => {
-    pressFired.value = true
-    if (!selectMode.value) selectMode.value = true
-    toggleGame(id)
-  }, LONG_PRESS_MS)
-}
-
-function startPressFolder(path: string) {
-  cancelPress()
-  pressTimer = window.setTimeout(() => {
-    pressFired.value = true
-    if (!selectMode.value) selectMode.value = true
-    toggleFolder(path)
-  }, LONG_PRESS_MS)
-}
-
-function handleGameClick(id: number) {
-  cancelPress()
-  if (pressFired.value) { pressFired.value = false; return }
-  if (selectMode.value) toggleGame(id)
-  else openGame(id)
-}
-
-function handleFolderClick(path: string) {
-  cancelPress()
-  if (pressFired.value) { pressFired.value = false; return }
-  if (selectMode.value) toggleFolder(path)
-  else openFolder(path)
-}
+const {
+  selectMode,
+  selectedGameIds,
+  selectedFolderPaths,
+  selectedCount,
+  toggleSelectMode,
+  toggleGame,
+  toggleFolder,
+  cancelPress,
+  startPressGame,
+  startPressFolder,
+  handleGameClick,
+  handleFolderClick,
+} = useCardSelection({ openGame, openFolder })
 
 const movePromptOpen = ref(false)
 const renamePromptOpen = ref(false)
@@ -249,7 +201,7 @@ async function onRename(newName: string) {
     }
     await load()
   } catch {
-    error.value = 'Rename failed'
+    error.value = t('platform.renameFailed')
   } finally {
     renamePromptOpen.value = false
     if (selectMode.value) toggleSelectMode()
@@ -266,7 +218,7 @@ async function onMove(target: string) {
     }
     await load()
   } catch {
-    error.value = 'Move failed'
+    error.value = t('platform.moveFailed')
   } finally {
     movePromptOpen.value = false
     if (selectMode.value) toggleSelectMode()
@@ -283,7 +235,7 @@ async function onDelete() {
     }
     await load()
   } catch {
-    error.value = 'Delete failed'
+    error.value = t('platform.deleteFailed')
   } finally {
     deletePromptOpen.value = false
     if (selectMode.value) toggleSelectMode()
@@ -312,7 +264,7 @@ async function doUpload(files: File[]) {
     }
     await load()
   } catch {
-    error.value = 'ROM upload failed'
+    error.value = t('platform.romUploadFailed')
   } finally {
     uploading.value = false
   }
@@ -324,7 +276,7 @@ async function onCreateFolder(name: string) {
     await createFolder('roms', props.tag, ...segments, name)
     await load()
   } catch {
-    error.value = 'Failed to create folder'
+    error.value = t('platform.createFolderFailed')
   } finally {
     showNewFolder.value = false
   }
@@ -394,72 +346,72 @@ onBeforeUnmount(() => {
     <NewFolderDialog v-if="showNewFolder" @close="showNewFolder = false" @create="onCreateFolder" />
     <MoveDialog v-if="movePromptOpen" :tag="props.tag" :folders="allFolders" :count="selectedCount" :moving-folders="[...selectedFolderPaths]" @close="movePromptOpen = false" @move="onMove" />
     <RenameDialog v-if="renamePromptOpen && renameTarget" :current-name="renameTarget.name" @close="renamePromptOpen = false" @rename="onRename" />
-    <Modal v-if="deletePromptOpen" :title="`Delete ${selectedCount} ${selectedCount === 1 ? 'item' : 'items'}?`" @close="deletePromptOpen = false">
-      <p class="text-sm text-foreground/80">The selected games and folders will be removed. Deleting a folder removes everything inside it.</p>
+    <Modal v-if="deletePromptOpen" :title="$t('platform.deleteTitle', selectedCount, { n: selectedCount })" @close="deletePromptOpen = false">
+      <p class="text-sm text-foreground/80">{{ $t('platform.deleteBody') }}</p>
       <template #footer>
-        <Button variant="ghost" @click="deletePromptOpen = false">Cancel</Button>
-        <Button variant="destructive" @click="onDelete">Delete</Button>
+        <Button variant="ghost" @click="deletePromptOpen = false">{{ $t('common.cancel') }}</Button>
+        <Button variant="destructive" @click="onDelete">{{ $t('common.delete') }}</Button>
       </template>
     </Modal>
 
     <div v-if="uploading" class="rounded-lg border border-border bg-card p-3 space-y-2">
       <div class="flex items-center justify-between text-sm">
         <span class="text-foreground font-medium truncate">
-          {{ uploadName }}<span v-if="uploadTotal > 1" class="text-foreground/60 font-normal"> ({{ uploadCurrent }} of {{ uploadTotal }})</span>
+          {{ uploadName }}<span v-if="uploadTotal > 1" class="text-foreground/60 font-normal"> {{ $t('platform.uploadCount', { current: uploadCurrent, total: uploadTotal }) }}</span>
         </span>
         <span class="font-mono text-foreground/60 ml-2 shrink-0">{{ uploadProgress }}%</span>
       </div>
-      <Progress :value="uploadProgress" class="!h-2.5" />
+      <Progress :value="uploadProgress" />
     </div>
 
     <div
       v-if="selectMode && selectedCount > 0"
       class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 py-2"
     >
-      <span class="text-sm font-medium text-foreground">{{ selectedCount }} selected</span>
+      <span class="text-sm font-medium text-foreground">{{ $t('platform.selectedCount', { n: selectedCount }) }}</span>
       <div class="flex items-center gap-2 sm:ml-auto flex-wrap">
         <button
           class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           @click="movePromptOpen = true"
-        >Move</button>
+        >{{ $t('common.move') }}</button>
         <button
           class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
           :disabled="!renameTarget"
           @click="renamePromptOpen = true"
-        >Rename</button>
+        >{{ $t('common.rename') }}</button>
         <button
           class="rounded-md border border-destructive/60 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
           @click="deletePromptOpen = true"
-        >Delete</button>
+        >{{ $t('common.delete') }}</button>
         <button
           class="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted"
           @click="toggleSelectMode"
-        >Done</button>
+        >{{ $t('platform.done') }}</button>
       </div>
     </div>
 
     <div class="flex items-center justify-between gap-3">
       <div class="relative w-64">
         <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/70 pointer-events-none" />
-        <Input v-model="search" placeholder="Search games..." class="!pl-9 !h-10 !text-base !rounded-lg" />
+        <Input v-model="search" :placeholder="$t('platform.searchPlaceholder')" class="!pl-9 !h-10 !text-base !rounded-lg" />
       </div>
       <div class="flex items-center gap-2">
         <button
           class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors"
           :class="selectMode ? 'border-accent bg-accent/10 text-foreground' : 'border-border text-foreground/70 hover:text-foreground'"
           :aria-pressed="selectMode"
-          title="Select items"
+          :title="$t('platform.selectItems')"
           @click="toggleSelectMode"
         >
           <CheckSquare class="h-4 w-4" />
-          Select
+          {{ $t('platform.select') }}
         </button>
         <div class="flex rounded-lg border border-border overflow-hidden">
           <button
             class="p-2 transition-colors"
             :class="viewMode === 'cards' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
             :aria-pressed="viewMode === 'cards'"
-            title="Card view"
+            :title="$t('platform.cardView')"
             @click="viewMode = 'cards'"
           >
             <LayoutGrid class="h-4 w-4" />
@@ -468,7 +420,7 @@ onBeforeUnmount(() => {
             class="p-2 transition-colors border-l border-border"
             :class="viewMode === 'table' ? 'bg-accent/10 text-accent' : 'text-foreground/70 hover:text-foreground'"
             :aria-pressed="viewMode === 'table'"
-            title="Table view"
+            :title="$t('platform.tableView')"
             @click="viewMode = 'table'"
           >
             <TableIcon class="h-4 w-4" />
@@ -477,17 +429,17 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">Loading games...</p>
+    <p v-if="loading" class="text-base text-foreground/75 py-8 text-center">{{ $t('platform.loadingGames') }}</p>
     <div v-else-if="error" class="text-base py-8 text-center space-y-2">
       <p class="text-destructive">{{ error }}</p>
-      <Button variant="outline" size="sm" @click="load">Retry</Button>
+      <Button variant="outline" size="sm" @click="load">{{ $t('common.retry') }}</Button>
     </div>
     <p v-else-if="!filtered.length && !currentFolders.length" class="text-base text-foreground/75 py-8 text-center">
-      {{ search ? `No games match "${search}".` : 'No games yet.' }}
+      {{ search ? $t('platform.noGamesMatch', { query: search }) : $t('platform.noGamesYet') }}
     </p>
     <template v-else-if="viewMode === 'cards'">
       <section v-if="currentFolders.length">
-        <h2 class="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-3">Folders</h2>
+        <h2 class="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-3">{{ $t('platform.foldersHeading') }}</h2>
         <div
           class="grid gap-2 sm:gap-3"
           style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));"
@@ -516,7 +468,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
       <section v-if="paged.length">
-        <h2 class="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-3">Games</h2>
+        <h2 class="text-xs font-semibold text-foreground/60 uppercase tracking-wider mb-3">{{ $t('platform.gamesHeading') }}</h2>
         <div
           ref="gridRef"
           class="grid gap-3 sm:gap-4"
@@ -565,9 +517,9 @@ onBeforeUnmount(() => {
     />
 
     <div v-if="!loading && !error && pageCount > 1" class="flex items-center justify-center gap-3 pt-1">
-      <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--">Prev</Button>
-      <span class="text-sm text-foreground/70">Page {{ page }} of {{ pageCount }}</span>
-      <Button variant="outline" size="sm" :disabled="page >= pageCount" @click="page++">Next</Button>
+      <Button variant="outline" size="sm" :disabled="page <= 1" @click="page--">{{ $t('platform.prev') }}</Button>
+      <span class="text-sm text-foreground/70">{{ $t('platform.pageOf', { page, total: pageCount }) }}</span>
+      <Button variant="outline" size="sm" :disabled="page >= pageCount" @click="page++">{{ $t('platform.next') }}</Button>
     </div>
 
     <div
@@ -575,7 +527,7 @@ onBeforeUnmount(() => {
       class="fixed inset-0 z-50 border-4 border-dashed border-accent bg-background/90 flex flex-col items-center justify-center gap-3 pointer-events-none"
     >
       <Upload class="h-12 w-12 text-accent" />
-      <p class="text-xl font-semibold text-foreground">Drop ROM files to upload</p>
+      <p class="text-xl font-semibold text-foreground">{{ $t('platform.dropRomsToUpload') }}</p>
     </div>
   </div>
 </template>

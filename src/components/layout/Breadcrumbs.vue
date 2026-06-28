@@ -11,7 +11,7 @@ defineProps<{ items: Crumb[] }>()
 </script>
 
 <template>
-  <nav class="flex items-center gap-2 text-lg min-w-0" aria-label="Breadcrumb">
+  <nav class="flex items-center gap-2 text-lg min-w-0" :aria-label="$t('dialogs.breadcrumb')">
     <template v-for="(item, i) in items" :key="i">
       <ChevronRight v-if="i > 0" class="h-4 w-4 shrink-0 text-muted-foreground/40" />
       <RouterLink

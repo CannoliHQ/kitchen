@@ -68,14 +68,26 @@ function browseFlat(resource: string) {
     <AppHeader />
 
     <!-- Nav tabs -->
-    <div class="flex items-center gap-1 border-b border-border">
+    <div class="sm:hidden">
+      <select
+        :value="activeTab"
+        class="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-base font-medium"
+        @change="selectTab(($event.target as HTMLSelectElement).value as 'content' | 'customization' | 'tools')"
+      >
+        <option value="content">{{ $t('dashboard.tabPlatforms') }}</option>
+        <option value="customization">{{ $t('dashboard.tabCustomization') }}</option>
+        <option value="tools">{{ $t('dashboard.tabTools') }}</option>
+      </select>
+    </div>
+
+    <div class="hidden sm:flex items-center gap-1 border-b border-border">
       <button
         class="pl-0 pr-4 py-1.5 text-lg transition-colors border-b-2 -mb-px"
         :class="activeTab === 'content' ? 'border-accent text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'"
         :aria-current="activeTab === 'content' ? 'page' : undefined"
         @click="selectTab('content')"
       >
-        Platforms
+        {{ $t('dashboard.tabPlatforms') }}
       </button>
       <button
         class="px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px"
@@ -83,7 +95,7 @@ function browseFlat(resource: string) {
         :aria-current="activeTab === 'customization' ? 'page' : undefined"
         @click="selectTab('customization')"
       >
-        Customization
+        {{ $t('dashboard.tabCustomization') }}
       </button>
       <button
         class="px-4 py-1.5 text-lg transition-colors border-b-2 -mb-px"
@@ -91,7 +103,7 @@ function browseFlat(resource: string) {
         :aria-current="activeTab === 'tools' ? 'page' : undefined"
         @click="selectTab('tools')"
       >
-        Tools
+        {{ $t('dashboard.tabTools') }}
       </button>
     </div>
 
@@ -101,13 +113,13 @@ function browseFlat(resource: string) {
         <div class="flex items-center justify-between">
           <div class="relative w-60">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input v-model="search" placeholder="Search platforms..." class="!pl-9 !h-9 !rounded-lg" />
+            <Input v-model="search" :placeholder="$t('dashboard.searchPlaceholder')" class="!pl-9 !h-9 !rounded-lg" />
           </div>
           <div class="flex items-center gap-2">
             <button
               class="p-2 rounded-lg transition-colors"
               :class="sortMode === 'era' ? 'text-accent bg-accent/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
-              title="Sort by era"
+              :title="$t('dashboard.sortByEra')"
               @click="sortMode = 'era'"
             >
               <CalendarDays class="h-4 w-4" />
@@ -115,7 +127,7 @@ function browseFlat(resource: string) {
             <button
               class="p-2 rounded-lg transition-colors"
               :class="sortMode === 'alpha' ? 'text-accent bg-accent/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
-              title="Sort alphabetically"
+              :title="$t('dashboard.sortAlphabetically')"
               @click="sortMode = 'alpha'"
             >
               <ArrowDownAZ class="h-4 w-4" />
@@ -123,12 +135,12 @@ function browseFlat(resource: string) {
           </div>
         </div>
 
-        <p v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Loading platforms...</p>
+        <p v-if="loading" class="text-sm text-muted-foreground py-8 text-center">{{ $t('dashboard.loadingPlatforms') }}</p>
         <p v-else-if="!tags.length" class="text-sm text-muted-foreground py-8 text-center">
-          No platforms found. Add ROMs to get started.
+          {{ $t('dashboard.noPlatforms') }}
         </p>
         <p v-else-if="!filteredTags.length" class="text-sm text-muted-foreground py-8 text-center">
-          No platforms match "{{ search }}".
+          {{ $t('dashboard.noMatch', { query: search }) }}
         </p>
 
         <!-- Grouped by era -->
@@ -201,7 +213,7 @@ function browseFlat(resource: string) {
               <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
                 <Wallpaper class="h-5 w-5 text-accent" />
               </div>
-              <span class="font-semibold">Wallpapers</span>
+              <span class="font-semibold">{{ $t('dashboard.wallpapers') }}</span>
             </div>
           </button>
           <button
@@ -213,7 +225,7 @@ function browseFlat(resource: string) {
               <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
                 <Palette class="h-5 w-5 text-accent" />
               </div>
-              <span class="font-semibold">Shaders</span>
+              <span class="font-semibold">{{ $t('dashboard.shaders') }}</span>
             </div>
           </button>
           <button
@@ -225,7 +237,7 @@ function browseFlat(resource: string) {
               <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
                 <Layers class="h-5 w-5 text-accent" />
               </div>
-              <span class="font-semibold">Overlays</span>
+              <span class="font-semibold">{{ $t('dashboard.overlays') }}</span>
             </div>
           </button>
         </div>
@@ -234,9 +246,9 @@ function browseFlat(resource: string) {
 
     <!-- Footer -->
     <footer class="pt-8 pb-6 text-center text-xs text-muted-foreground/60 border-t border-border/50">
-      Platform icons courtesy of <a href="https://git.libretro.com/libretro-assets/retroarch-assets" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Libretro</a> (CC BY 4.0).<br />
-      PICO-8 logo courtesy of <a href="https://www.lexaloffle.com/pico-8.php" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Lexaloffle</a>.<br />
-      All trademarks are property of their respective owners.
+      <span>{{ $t('dashboard.footerIconsPrefix') }} </span><a href="https://git.libretro.com/libretro-assets/retroarch-assets" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Libretro</a><span> {{ $t('dashboard.footerIconsSuffix') }}</span><br />
+      <span>{{ $t('dashboard.footerPico8Prefix') }} </span><a href="https://www.lexaloffle.com/pico-8.php" class="underline hover:text-muted-foreground" target="_blank" rel="noopener">Lexaloffle</a><span>{{ $t('dashboard.footerPico8Suffix') }}</span><br />
+      {{ $t('dashboard.footerTrademarks') }}
     </footer>
   </div>
 </template>
