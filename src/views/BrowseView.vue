@@ -188,7 +188,7 @@ function navigateTo(pathSegments: string[]) {
 
 const rootLabel = computed(() => props.resource === 'fs'
   ? resourceLabel.value
-  : `/${resourceLabel.value}${props.tag ? `/${props.tag}` : ''}`)
+  : `${resourceLabel.value}${props.tag ? `/${props.tag}` : ''}`)
 
 const crumbs = computed<Crumb[]>(() => {
   const items: Crumb[] = [{ label: rootLabel.value, to: routeFor([]) }]
@@ -666,7 +666,7 @@ onMounted(load)
 
       <!-- Current path display -->
       <div class="flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
-        <button class="hover:text-foreground font-medium" @click="moveBrowseToRoot">/{{ resourceLabel }}{{ props.tag && props.resource !== 'fs' ? `/${props.tag}` : '' }}</button>
+        <button class="hover:text-foreground font-medium" @click="moveBrowseToRoot">{{ resourceLabel }}{{ props.tag && props.resource !== 'fs' ? `/${props.tag}` : '' }}</button>
         <template v-for="(seg, i) in moveBrowsePath" :key="i">
           <ChevronRight class="h-3.5 w-3.5 shrink-0" />
           <button
