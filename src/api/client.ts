@@ -150,6 +150,7 @@ export interface GameRow {
   savesCount: number
   statesCount: number
   guidesCount: number
+  cheatsCount: number
   raGameId?: number
   lastPlayedAt?: number
   multiDisc: boolean
@@ -306,6 +307,29 @@ export async function uploadGameGuide(tag: string, id: number, file: File): Prom
 export async function deleteGameGuide(tag: string, id: number, name: string): Promise<void> {
   const res = await request(`${gameBase(tag, id)}/guides?file=${encodeURIComponent(name)}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`deleteGameGuide ${res.status}`)
+}
+
+export async function listGameCheats(tag: string, id: number): Promise<GameFile[]> {
+  const res = await request(`${gameBase(tag, id)}/cheats`)
+  if (!res.ok) throw new Error(`listGameCheats ${res.status}`)
+  return (await res.json()).files
+}
+
+export async function downloadGameCheat(tag: string, id: number, name: string): Promise<void> {
+  await downloadFile(`${gameBase(tag, id)}/cheats?file=${encodeURIComponent(name)}`, name)
+}
+
+export async function uploadGameCheat(tag: string, id: number, file: File): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/cheats?name=${encodeURIComponent(file.name)}`, {
+    method: 'POST',
+    body: file,
+  })
+  if (!res.ok) throw new Error(`uploadGameCheat ${res.status}`)
+}
+
+export async function deleteGameCheat(tag: string, id: number, name: string): Promise<void> {
+  const res = await request(`${gameBase(tag, id)}/cheats?file=${encodeURIComponent(name)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`deleteGameCheat ${res.status}`)
 }
 
 export async function listGameStates(tag: string, id: number): Promise<SlotList> {

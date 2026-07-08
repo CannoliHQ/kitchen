@@ -8,6 +8,7 @@ export default {
   tabSaves: 'Saves',
   tabSaveStates: 'Save States',
   tabGuides: 'Guides',
+  tabCheats: 'Cheats',
 
   // Last played
   neverPlayed: 'Never played',
@@ -64,4 +65,8 @@ export default {
   // Guides tab
   loadGuidesFailed: 'Failed to load guides',
   noGuides: 'No guides yet.',
+
+  // Cheats tab
+  loadCheatsFailed: 'Failed to load cheats',
+  noCheats: 'No cheat files yet. Upload a .cht file to get started.',
 }
