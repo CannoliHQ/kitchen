@@ -485,7 +485,7 @@ export const DEFAULT_LAUNCHER_SETTINGS: LauncherSettings = {
 
 export async function getSettings(): Promise<LauncherSettings> {
   const res = await request('/api/settings')
-  if (!res.ok) return DEFAULT_LAUNCHER_SETTINGS
+  if (!res.ok) return { ...DEFAULT_LAUNCHER_SETTINGS }
   return { ...DEFAULT_LAUNCHER_SETTINGS, ...(await res.json()) }
 }
 
