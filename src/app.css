@@ -2,22 +2,23 @@
 
 @theme {
   /* Cannoli OS palette */
-  --color-background: #1a1a2e;
-  --color-foreground: #f5e6ca;
-  --color-card: #222240;
-  --color-card-foreground: #f5e6ca;
-  --color-primary: #4a9ab5;
-  --color-primary-light: #80c1dd;
-  --color-primary-dark: #357a94;
-  --color-primary-foreground: #1a1a2e;
-  --color-muted: #2a2a48;
-  --color-muted-foreground: #9a8e7a;
-  --color-border: #2e2e50;
-  --color-input: #2e2e50;
-  --color-ring: #4a9ab5;
-  --color-destructive: #c45050;
+  --color-background: #161618;
+  --color-foreground: #ffffff;
+  --color-card: #24211c;
+  --color-card-foreground: #ffffff;
+  --color-primary: #a3b87f;
+  --color-primary-light: #bccc9f;
+  --color-primary-dark: #87a065;
+  --color-primary-foreground: #161618;
+  --color-muted: #2a2620;
+  --color-muted-foreground: #d4d4d4;
+  --color-surface-sunken: #0e0e10;
+  --color-border: #322d24;
+  --color-input: #322d24;
+  --color-ring: #a3b87f;
+  --color-destructive: #e05872;
   --color-accent: #d9a06a;
-  --color-accent-foreground: #1a1a2e;
+  --color-accent-foreground: #161618;
   --color-cream: #f5e6ca;
   --color-cream-light: #faf0dc;
   --color-tan: #d9a06a;
@@ -27,8 +28,17 @@
   --radius-lg: 1rem;
 }
 
+html {
+  font-size: 18px;
+}
+
 body {
   @apply bg-background text-foreground antialiased;
   font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 

@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { setCredentials, setBaseUrlOnly, getInfo, clearCredentials, getAuthStatus } from '@/api/client'
+import { setCredentials, setBaseUrlOnly, getInfo, clearCredentials, getAuthStatus, DEFAULT_PORT } from '@/api/client'
 import Card from '@/components/ui/Card.vue'
 
 const router = useRouter()
 const route = useRoute()
 
-const DEFAULT_PORT = '1091'
+const redirectTarget = (() => {
+  const r = route.query.redirect
+  return typeof r === 'string' && r.startsWith('/') && r !== '/' ? r : null
+})()
+
+function proceed() {
+  router.push(redirectTarget ?? { name: 'dashboard' })
+}
 
 const servedFromDevice = window.location.port === DEFAULT_PORT
 const octets = ref<string[]>(servedFromDevice
@@ -20,6 +27,7 @@ const digitRefs = ref<HTMLInputElement[]>([])
 const pinError = ref(false)
 const connectionError = ref(false)
 const loading = ref(false)
+const checking = ref(true)
 const showHost = ref(!servedFromDevice)
 const pinRequired = ref(true)
 
@@ -93,6 +101,7 @@ onMounted(async () => {
     }
   }
 
+  checking.value = false
   nextTick(() => {
     if (showHost.value) {
       octetRefs.value[0]?.focus()
@@ -168,18 +177,19 @@ async function connect(silent = false) {
   try {
     setCredentials(host.value, pin)
     await getInfo()
-    router.push({ name: 'dashboard' })
+    proceed()
   } catch (err) {
     clearCredentials()
     digits.value = Array(6).fill('')
     loading.value = false
+    checking.value = false
     nextTick(() => digitRefs.value[0]?.focus())
-    if (!silent && err instanceof Error) {
-      if (err.message === 'Unauthorized') {
+    if (err instanceof Error) {
+      if (err.message === 'ConnectionError') {
+        connectionError.value = true
+      } else if (!silent && err.message === 'Unauthorized') {
         pinError.value = true
         setTimeout(() => { pinError.value = false }, 600)
-      } else if (err.message === 'ConnectionError') {
-        connectionError.value = true
       }
     }
   }
@@ -189,15 +199,17 @@ async function tryPinlessConnect(): Promise<boolean> {
   if (!octets.value.every(o => o)) return false
   try {
     const status = await getAuthStatus(host.value)
+    connectionError.value = false
     if (status.required) {
       pinRequired.value = true
       return false
     }
     pinRequired.value = false
     setBaseUrlOnly(host.value)
-    router.push({ name: 'dashboard' })
+    proceed()
     return true
   } catch {
+    connectionError.value = true
     return false
   }
 }
@@ -254,15 +266,17 @@ function onDigitPaste(event: ClipboardEvent) {
       <div class="space-y-3 text-center">
         <img src="/logo.png" alt="Cannoli" class="mx-auto h-16 w-auto" />
         <h1 class="text-2xl font-bold tracking-tight">Nonna's Kitchen</h1>
-        <p v-if="showHost" class="text-lg font-semibold text-foreground">Enter your device IP.</p>
-        <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">Please enter the PIN shown.</p>
-        <p v-if="connectionError" class="text-sm font-medium text-destructive">Cannot connect to server.<br>Ensure Nonna's Kitchen is running.</p>
+        <template v-if="!checking">
+          <p v-if="connectionError" class="text-sm font-medium text-destructive">{{ $t('login.cannotConnect') }}<br>{{ $t('login.ensureRunning', { brand: "Nonna's Kitchen" }) }}</p>
+          <p v-else-if="showHost" class="text-lg font-semibold text-foreground">{{ $t('login.enterDeviceIp') }}</p>
+          <p v-else-if="pinRequired" class="text-lg font-semibold text-foreground">{{ $t('login.enterPin') }}</p>
+        </template>
       </div>
 
-      <div class="space-y-5">
+      <div v-if="!checking" class="space-y-5">
         <!-- IP Address -->
         <div v-if="showHost" class="space-y-2">
-          <label class="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center block">Device IP Address</label>
+          <label class="text-xs font-semibold uppercase tracking-widest text-muted-foreground text-center block">{{ $t('login.deviceIpAddress') }}</label>
           <div class="flex items-center justify-center gap-1.5" @paste="onOctetPaste">
             <template v-for="(_, i) in 4" :key="i">
               <input
@@ -272,7 +286,7 @@ function onDigitPaste(event: ClipboardEvent) {
                 maxlength="3"
                 :value="octets[i]"
                 :disabled="loading"
-                class="h-12 w-12 border border-input bg-background text-center text-lg font-mono font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                class="h-12 w-12 rounded-lg border border-input bg-background text-center text-lg font-mono font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 @input="onOctetInput(i, $event)"
                 @keydown="onOctetKeydown(i, $event)"
               />
@@ -282,7 +296,7 @@ function onDigitPaste(event: ClipboardEvent) {
         </div>
 
         <!-- PIN -->
-        <div v-if="pinRequired" class="space-y-2">
+        <div v-if="pinRequired && !connectionError" class="space-y-2">
           <div class="flex justify-center gap-2" :class="{ 'animate-shake': pinError }" @paste="onDigitPaste">
             <input
               v-for="(_, i) in 6"
@@ -293,7 +307,7 @@ function onDigitPaste(event: ClipboardEvent) {
               maxlength="2"
               :value="digits[i]"
               :disabled="loading"
-              class="h-12 w-12 border bg-background text-center text-lg font-mono font-bold text-foreground uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-colors"
+              class="h-12 w-12 rounded-lg border bg-background text-center text-lg font-mono font-bold text-foreground uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-colors"
               :class="pinError ? 'border-destructive' : 'border-input'"
               @input="onDigitInput(i, $event)"
               @keydown="onDigitKeydown(i, $event)"

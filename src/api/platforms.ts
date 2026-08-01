@@ -41,6 +41,7 @@ export const PLATFORM_NAMES: Record<string, string> = {
   DOS: 'DOS',
   SCUMMVM: 'ScummVM',
   AMIGA: 'Amiga',
+  PICO8: 'PICO-8',
   PS2: 'PlayStation 2',
   GC: 'GameCube',
   WII: 'Wii',
@@ -61,7 +62,7 @@ const PLATFORM_GROUPS: Record<string, string[]> = {
   Bandai: ['WS', 'WSC'],
   Arcade: ['MAME', 'FBN'],
   Computer: ['DOS', 'SCUMMVM', 'AMIGA'],
-  Other: ['COLECOVISION', 'VECTREX', 'INTELLIVISION'],
+  Other: ['COLECOVISION', 'VECTREX', 'INTELLIVISION', 'PICO8'],
 }
 
 /** All tags that belong to a known group */
@@ -103,4 +104,10 @@ export function platformName(tag: string): string {
 export function platformLabel(tag: string): string {
   const name = PLATFORM_NAMES[tag]
   return name ? `${name} (${tag})` : tag
+}
+
+const FBNEO_SAMPLE_TAGS = ['FBN']
+
+export function supportsFbneoSamples(tag: string): boolean {
+  return FBNEO_SAMPLE_TAGS.includes(tag)
 }
