@@ -4,9 +4,10 @@ import { useRouter } from 'vue-router'
 import { getTags } from '@/api/client'
 import { platformName, platformLabel, platformIcon, groupPlatforms, type PlatformGroup } from '@/api/platforms'
 import Input from '@/components/ui/Input.vue'
-import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Layers, StarsIcon } from 'lucide-vue-next'
+import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Layers, StarsIcon, Wrench, Joystick } from 'lucide-vue-next'
 import ToolsTab from '@/components/tools/ToolsTab.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
+import { useLauncherSettings } from '@/composables/useLauncherSettings'
 
 const props = defineProps<{ tab?: string }>()
 const router = useRouter()
@@ -17,6 +18,7 @@ const sortMode = ref<'era' | 'alpha'>(
   localStorage.getItem('cannoli_sort_mode') === 'alpha' ? 'alpha' : 'era',
 )
 watch(sortMode, v => localStorage.setItem('cannoli_sort_mode', v))
+const { settings: launcherSettings, load: loadLauncherSettings } = useLauncherSettings()
 const activeTab = computed<'content' | 'customization' | 'tools'>(() => {
   if (props.tab === 'customization') return 'customization'
   if (props.tab === 'tools') return 'tools'
@@ -46,6 +48,7 @@ const groups = computed<PlatformGroup[]>(() => groupPlatforms(filteredTags.value
 const alphabeticalGroups = computed<PlatformGroup[]>(() => groupPlatforms(filteredTags.value, true))
 
 onMounted(async () => {
+  loadLauncherSettings()
   try {
     tags.value = await getTags()
   } finally {
@@ -59,6 +62,10 @@ function openPlatform(tag: string) {
 
 function browseFlat(resource: string) {
   router.push({ name: 'browse-flat', params: { resource } })
+}
+
+function browseArt(tag: string) {
+  router.push({ name: 'browse', params: { resource: 'art', tag } })
 }
 </script>
 
@@ -238,6 +245,30 @@ function browseFlat(resource: string) {
                 <Wallpaper class="h-5 w-5 text-accent" />
               </div>
               <span class="font-semibold">{{ $t('dashboard.wallpapers') }}</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            @click="browseArt('TOOLS')"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
+                <Wrench class="h-5 w-5 text-accent" />
+              </div>
+              <span class="font-semibold">{{ launcherSettings.toolsName || $t('dashboard.toolsArt') }}</span>
+            </div>
+          </button>
+          <button
+            type="button"
+            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            @click="browseArt('PORTS')"
+          >
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
+                <Joystick class="h-5 w-5 text-accent" />
+              </div>
+              <span class="font-semibold">{{ launcherSettings.portsName || $t('dashboard.portsArt') }}</span>
             </div>
           </button>
         </div>

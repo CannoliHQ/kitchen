@@ -11,6 +11,8 @@ export default {
   wallpapers: 'Wallpapers',
   shaders: 'Shaders',
   overlays: 'Overlays',
+  toolsArt: 'Tools Art',
+  portsArt: 'Ports Art',
   footerIconsPrefix: 'Platform icons courtesy of ',
   footerIconsSuffix: ' (CC BY 4.0).',
   footerPico8Prefix: 'PICO-8 logo courtesy of ',
