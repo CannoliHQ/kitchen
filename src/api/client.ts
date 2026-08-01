@@ -462,6 +462,33 @@ export async function getApkStatus(installId: string): Promise<ApkStatus> {
   return res.json()
 }
 
+export interface AppsResponse {
+  tools: string[]
+  ports: string[]
+}
+
+export async function getApps(): Promise<AppsResponse> {
+  const res = await request('/api/apps')
+  if (!res.ok) return { tools: [], ports: [] }
+  return res.json()
+}
+
+export interface LauncherSettings {
+  toolsName: string
+  portsName: string
+}
+
+export const DEFAULT_LAUNCHER_SETTINGS: LauncherSettings = {
+  toolsName: 'Tools',
+  portsName: 'Ports',
+}
+
+export async function getSettings(): Promise<LauncherSettings> {
+  const res = await request('/api/settings')
+  if (!res.ok) return DEFAULT_LAUNCHER_SETTINGS
+  return { ...DEFAULT_LAUNCHER_SETTINGS, ...(await res.json()) }
+}
+
 export function uploadFiles<T = { ok: boolean; files: string[] }>(
   resource: string,
   subpath: string[],

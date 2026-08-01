@@ -50,6 +50,8 @@ export const PLATFORM_NAMES: Record<string, string> = {
   PSVITA: 'PS Vita',
   PS3: 'PlayStation 3',
   NSW: 'Nintendo Switch',
+  TOOLS: 'Tools',
+  PORTS: 'Ports',
 }
 
 const PLATFORM_GROUPS: Record<string, string[]> = {
@@ -104,6 +106,12 @@ export function platformName(tag: string): string {
 export function platformLabel(tag: string): string {
   const name = PLATFORM_NAMES[tag]
   return name ? `${name} (${tag})` : tag
+}
+
+export const APP_TAGS = ['TOOLS', 'PORTS'] as const
+
+export function isAppTag(tag: string): boolean {
+  return (APP_TAGS as readonly string[]).includes(tag)
 }
 
 const FBNEO_SAMPLE_TAGS = ['FBN']
