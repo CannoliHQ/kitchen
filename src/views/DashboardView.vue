@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTags, getApps } from '@/api/client'
-import { platformName, platformIcon, isAppTag, groupPlatforms, type PlatformGroup } from '@/api/platforms'
+import { platformName, platformIcon, groupPlatforms, type PlatformGroup } from '@/api/platforms'
 import Input from '@/components/ui/Input.vue'
 import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Layers, StarsIcon } from 'lucide-vue-next'
 import ToolsTab from '@/components/tools/ToolsTab.vue'
@@ -72,19 +72,11 @@ onMounted(async () => {
 })
 
 function openPlatform(tag: string) {
-  if (isAppTag(tag)) {
-    browseArt(tag)
-    return
-  }
   router.push({ name: 'platform', params: { tag } })
 }
 
 function browseFlat(resource: string) {
   router.push({ name: 'browse-flat', params: { resource } })
-}
-
-function browseArt(tag: string) {
-  router.push({ name: 'browse', params: { resource: 'art', tag } })
 }
 </script>
 

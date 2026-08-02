@@ -3,7 +3,9 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { uploadFiles } from '@/api/client'
-import { platformName, supportsFbneoSamples } from '@/api/platforms'
+import { platformName, supportsFbneoSamples, isAppTag } from '@/api/platforms'
+import { useLauncherSettings } from '@/composables/useLauncherSettings'
+import AppsTab from '@/components/platform/AppsTab.vue'
 import Dropdown from '@/components/ui/Dropdown.vue'
 import type { DropdownItem } from '@/components/ui/Dropdown.vue'
 import Progress from '@/components/ui/Progress.vue'
@@ -13,15 +15,27 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
 import { Cpu, FolderPlus, Gamepad2, Image, Layers, Music, Upload } from 'lucide-vue-next'
 
-type TabKey = 'games' | 'overlays' | 'bios' | 'samples'
-const TAB_KEYS: readonly TabKey[] = ['games', 'overlays', 'bios', 'samples']
+type TabKey = 'games' | 'overlays' | 'bios' | 'samples' | 'apps'
+const TAB_KEYS: readonly TabKey[] = ['games', 'overlays', 'bios', 'samples', 'apps']
 const SAMPLES_SUBPATH = ['fbneo', 'samples']
 
 const props = defineProps<{ tag: string; tab?: string; folder?: string }>()
 const router = useRouter()
 const { t } = useI18n()
 
+const isApps = computed(() => isAppTag(props.tag))
+const { settings: launcherSettings, load: loadLauncherSettings } = useLauncherSettings()
+loadLauncherSettings()
+
+/** Tools and Ports show the row name the user chose in the launcher, not a PLATFORM_NAMES entry. */
+const displayName = computed(() => {
+  if (props.tag === 'TOOLS') return launcherSettings.value.toolsName
+  if (props.tag === 'PORTS') return launcherSettings.value.portsName
+  return platformName(props.tag)
+})
+
 const activeTab = computed<TabKey>(() => {
+  if (isApps.value) return 'apps'
   const t = TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'games'
   return t === 'samples' && !supportsFbneoSamples(props.tag) ? 'games' : t
 })
@@ -30,7 +44,7 @@ const crumbs = computed<Crumb[]>(() => {
   const items: Crumb[] = [{ label: t('platform.crumbPlatforms'), to: { name: 'dashboard' } }]
   const folder = props.folder
   if (folder) {
-    items.push({ label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag } } })
+    items.push({ label: displayName.value, to: { name: 'platform', params: { tag: props.tag } } })
     const parts = folder.split('/').filter(Boolean)
     parts.forEach((part, i) => {
       const path = parts.slice(0, i + 1).join('/')
@@ -40,12 +54,13 @@ const crumbs = computed<Crumb[]>(() => {
       })
     })
   } else {
-    items.push({ label: platformName(props.tag) })
+    items.push({ label: displayName.value })
   }
   return items
 })
 
 const tabs = computed(() => {
+  if (isApps.value) return [{ key: 'apps' as TabKey, label: displayName.value }]
   const list: { key: TabKey; label: string }[] = [
     { key: 'games', label: t('platform.tabGames') },
     { key: 'overlays', label: t('platform.tabOverlays') },
@@ -56,6 +71,7 @@ const tabs = computed(() => {
 })
 
 function selectTab(tab: TabKey) {
+  if (isApps.value) return
   if (tab === 'games') {
     router.replace({ name: 'platform', params: { tag: props.tag } })
   } else if (tab === 'overlays') {
@@ -109,6 +125,11 @@ function handleBulkArtFiles(event: Event) {
 }
 
 const actionItems = computed<DropdownItem[]>(() => {
+  if (activeTab.value === 'apps') {
+    return [
+      { label: t('platform.bulkArtUpload'), icon: Image, onSelect: () => bulkArtInput.value?.click() },
+    ]
+  }
   if (activeTab.value === 'games') {
     return [
       { label: t('platform.newFolder'), icon: FolderPlus, onSelect: () => gamesTabRef.value?.triggerNewFolder() },
@@ -180,8 +201,12 @@ const actionItems = computed<DropdownItem[]>(() => {
     </div>
 
     <div>
+      <AppsTab
+        v-if="activeTab === 'apps'"
+        :tag="props.tag"
+      />
       <GamesTab
-        v-if="activeTab === 'games'"
+        v-else-if="activeTab === 'games'"
         ref="gamesTabRef"
         :tag="props.tag"
         :folder="props.folder ?? ''"
