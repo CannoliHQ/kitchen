@@ -751,6 +751,7 @@ onMounted(load)
       :mode="gamePickerMode"
       :roms="gamePickerRoms"
       :loading="gamePickerLoading"
+      :apps="isApps"
       @cancel="cancelGamePicker"
       @pick="pickGame"
       @confirm-art="onConfirmArt"

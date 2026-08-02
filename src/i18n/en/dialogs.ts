@@ -10,6 +10,10 @@ export default {
   uploadingArtFor: 'Uploading art for',
   dragImageHint: 'Drag an image here or click to browse',
   pickADifferentGame: 'Pick a different game',
+  pickAnItem: 'Pick an item',
+  searchItems: 'Search items...',
+  noItemsFound: 'No items found.',
+  pickADifferentItem: 'Pick a different item',
   actions: 'Actions',
   breadcrumb: 'Breadcrumb',
   shaderUpload: {

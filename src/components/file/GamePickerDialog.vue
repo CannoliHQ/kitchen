@@ -9,6 +9,7 @@ const props = defineProps<{
   mode: 'folder' | 'upload' | 'art'
   roms: string[]
   loading: boolean
+  apps?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +17,11 @@ const emit = defineEmits<{
   pick: [name: string]
   confirmArt: [payload: { game: string; file: File }]
 }>()
+
+const pickTitleKey = computed(() => props.apps ? 'dialogs.pickAnItem' : 'dialogs.pickAGame')
+const searchKey = computed(() => props.apps ? 'dialogs.searchItems' : 'dialogs.searchGames')
+const emptyKey = computed(() => props.apps ? 'dialogs.noItemsFound' : 'dialogs.noGamesFound')
+const pickAnotherKey = computed(() => props.apps ? 'dialogs.pickADifferentItem' : 'dialogs.pickADifferentGame')
 
 const search = ref('')
 const artGame = ref<string | null>(null)
@@ -66,16 +72,16 @@ function confirmArt() {
       <div class="bg-card border border-border rounded-xl w-full max-w-md mx-4 p-5 space-y-4 shadow-xl">
         <!-- Art mode: two-step (pick game, then pick file) -->
         <template v-if="mode === 'art'">
-          <h2 class="text-lg font-semibold">{{ artGame ? $t('dialogs.addBoxArt') : $t('dialogs.pickAGame') }}</h2>
+          <h2 class="text-lg font-semibold">{{ artGame ? $t('dialogs.addBoxArt') : $t(pickTitleKey) }}</h2>
 
           <template v-if="!artGame">
             <div class="relative">
               <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input v-model="search" :placeholder="$t('dialogs.searchGames')" class="!pl-9" />
+              <Input v-model="search" :placeholder="$t(searchKey)" class="!pl-9" />
             </div>
             <div class="rounded-lg border border-border max-h-64 overflow-y-auto">
               <div v-if="loading" class="p-4 text-sm text-muted-foreground text-center">{{ $t('common.loading') }}</div>
-              <div v-else-if="!filtered.length" class="p-4 text-sm text-muted-foreground text-center">{{ $t('dialogs.noGamesFound') }}</div>
+              <div v-else-if="!filtered.length" class="p-4 text-sm text-muted-foreground text-center">{{ $t(emptyKey) }}</div>
               <button
                 v-for="name in filtered"
                 :key="name"
@@ -115,7 +121,7 @@ function confirmArt() {
             </div>
             <div class="flex items-center justify-between">
               <button class="text-sm text-muted-foreground hover:text-foreground" @click="artGame = null; artFile = null">
-                &larr; {{ $t('dialogs.pickADifferentGame') }}
+                &larr; {{ $t(pickAnotherKey) }}
               </button>
               <div class="flex items-center gap-2">
                 <Button variant="ghost" size="sm" @click="emit('cancel')">{{ $t('common.cancel') }}</Button>
