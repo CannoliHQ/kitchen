@@ -95,13 +95,10 @@ export function groupPlatforms(tags: string[], alphabetical = false): PlatformGr
   return groups
 }
 
-/** Tags whose icon is not an SVG. PC comes from a raster source with no vector original. */
-const ICON_EXT: Record<string, string> = { PC: 'png' }
-
-/** Returns the path to a platform icon, or undefined if there is none. App tags fall through to a generic icon. */
+/** Returns the path to a platform icon SVG, or undefined if there is none. App tags fall through to a generic icon. */
 export function platformIcon(tag: string): string | undefined {
   if (isAppTag(tag)) return undefined
-  if (PLATFORM_NAMES[tag]) return `/platforms/${tag}.${ICON_EXT[tag] ?? 'svg'}`
+  if (PLATFORM_NAMES[tag]) return `/platforms/${tag}.svg`
   return undefined
 }
 
