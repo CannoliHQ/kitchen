@@ -2,7 +2,9 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, downloadToDisk, type FileEntry } from '@/api/client'
+import { listFiles, listFilesRecursive, uploadFiles, createFolder, deleteFile, moveFile, downloadToDisk, getApps, type FileEntry } from '@/api/client'
+import { isAppTag } from '@/api/platforms'
+import { useLauncherSettings } from '@/composables/useLauncherSettings'
 import { confirm } from '@/lib/confirm'
 import { formatSize, stripExtension, isPreviewable } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
@@ -96,19 +98,25 @@ const breadcrumbs = computed(() => {
 /** True when uploads should prompt for a game name to rename the file */
 const needsGameRename = computed(() => ['saves', 'art'].includes(props.resource) && !!props.tag)
 
+const isApps = computed(() => !!props.tag && isAppTag(props.tag))
 
 async function openGamePicker(mode: 'folder' | 'upload' | 'art' = 'folder') {
   gamePickerMode.value = mode
   showGamePicker.value = true
   gamePickerLoading.value = true
   try {
-    const data = await listFilesRecursive('roms', props.tag!)
-    gamePickerRoms.value = data.entries
-      .filter(e => e.type === 'file')
-      .map(e => {
-        const name = e.name.includes('/') ? e.name.substring(e.name.lastIndexOf('/') + 1) : e.name
-        return stripExtension(name)
-      })
+    if (isApps.value) {
+      const apps = await getApps()
+      gamePickerRoms.value = props.tag === 'TOOLS' ? apps.tools : apps.ports
+    } else {
+      const data = await listFilesRecursive('roms', props.tag!)
+      gamePickerRoms.value = data.entries
+        .filter(e => e.type === 'file')
+        .map(e => {
+          const name = e.name.includes('/') ? e.name.substring(e.name.lastIndexOf('/') + 1) : e.name
+          return stripExtension(name)
+        })
+    }
   } catch {
     gamePickerRoms.value = []
   } finally {
@@ -194,9 +202,19 @@ function navigateTo(pathSegments: string[]) {
   router.push(routeFor(pathSegments))
 }
 
+const { settings: launcherSettings, load: loadLauncherSettings } = useLauncherSettings()
+loadLauncherSettings()
+
+const tagLabel = computed(() => {
+  if (!props.tag) return ''
+  if (props.tag === 'TOOLS') return launcherSettings.value.toolsName
+  if (props.tag === 'PORTS') return launcherSettings.value.portsName
+  return props.tag
+})
+
 const rootLabel = computed(() => props.resource === 'fs'
   ? resourceLabel.value
-  : `${resourceLabel.value}${props.tag ? `/${props.tag}` : ''}`)
+  : `${resourceLabel.value}${props.tag ? `/${tagLabel.value}` : ''}`)
 
 const crumbs = computed<Crumb[]>(() => {
   const items: Crumb[] = [{ label: rootLabel.value, to: routeFor([]) }]
@@ -481,7 +499,7 @@ onMounted(load)
       <template v-else-if="props.resource === 'art' && props.tag">
         <Button variant="outline" size="sm" class="shrink-0" @click="openArtPicker">
           <ImagePlus class="h-4 w-4" />
-          {{ $t('browse.addBoxArtForGame') }}
+          {{ isApps ? $t('browse.addBoxArt') : $t('browse.addBoxArtForGame') }}
         </Button>
         <Button variant="outline" size="sm" class="shrink-0" @click="bulkArtInput?.click()">
           <Upload class="h-4 w-4" />
@@ -677,7 +695,7 @@ onMounted(load)
 
       <!-- Current path display -->
       <div class="flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
-        <button class="hover:text-foreground font-medium" @click="moveBrowseToRoot">{{ resourceLabel }}{{ props.tag && props.resource !== 'fs' ? `/${props.tag}` : '' }}</button>
+        <button class="hover:text-foreground font-medium" @click="moveBrowseToRoot">{{ resourceLabel }}{{ props.tag && props.resource !== 'fs' ? `/${tagLabel}` : '' }}</button>
         <template v-for="(seg, i) in moveBrowsePath" :key="i">
           <ChevronRight class="h-3.5 w-3.5 shrink-0" />
           <button

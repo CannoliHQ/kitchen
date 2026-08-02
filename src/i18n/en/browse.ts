@@ -13,6 +13,7 @@ export default {
   addGuidesForGame: 'Add guides for a game',
   addSaveStatesForGame: 'Add save states for a game',
   addBoxArtForGame: 'Add box art for a game',
+  addBoxArt: 'Add box art',
   bulkUploadPreNamed: 'Bulk Upload Pre-Named Files',
   addShader: 'Add shader',
   dragFilesHere: 'Drag files here or',
