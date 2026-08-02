@@ -65,6 +65,7 @@ const PLATFORM_GROUPS: Record<string, string[]> = {
   Arcade: ['MAME', 'FBN'],
   Computer: ['DOS', 'SCUMMVM', 'AMIGA'],
   Other: ['COLECOVISION', 'VECTREX', 'INTELLIVISION', 'PICO8'],
+  'Android Apps': ['TOOLS', 'PORTS'],
 }
 
 /** All tags that belong to a known group */
@@ -93,8 +94,9 @@ export function groupPlatforms(tags: string[], alphabetical = false): PlatformGr
   return groups
 }
 
-/** Returns the path to a platform icon SVG, or undefined if unknown. */
+/** Returns the path to a platform icon SVG, or undefined if unknown. App tags have no SVG and render a lucide icon instead. */
 export function platformIcon(tag: string): string | undefined {
+  if (isAppTag(tag)) return undefined
   if (PLATFORM_NAMES[tag]) return `/platforms/${tag}.svg`
   return undefined
 }

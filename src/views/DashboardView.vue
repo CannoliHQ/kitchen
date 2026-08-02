@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getTags } from '@/api/client'
-import { platformName, platformLabel, platformIcon, groupPlatforms, type PlatformGroup } from '@/api/platforms'
+import { getTags, getApps } from '@/api/client'
+import { platformName, platformIcon, isAppTag, groupPlatforms, type PlatformGroup } from '@/api/platforms'
 import Input from '@/components/ui/Input.vue'
-import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Layers, StarsIcon, Wrench, Joystick } from 'lucide-vue-next'
+import { Wallpaper, Search, Gamepad2, ArrowDownAZ, CalendarDays, Layers, StarsIcon } from 'lucide-vue-next'
 import ToolsTab from '@/components/tools/ToolsTab.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import { useLauncherSettings } from '@/composables/useLauncherSettings'
@@ -12,6 +12,7 @@ import { useLauncherSettings } from '@/composables/useLauncherSettings'
 const props = defineProps<{ tab?: string }>()
 const router = useRouter()
 const tags = ref<string[]>([])
+const appTags = ref<string[]>([])
 const loading = ref(true)
 const search = ref('')
 const sortMode = ref<'era' | 'alpha'>(
@@ -35,11 +36,20 @@ watch(() => props.tab, t => {
   if (t && !VALID_TABS.includes(t)) router.replace('/dashboard/games')
 }, { immediate: true })
 
+/** Tools and Ports carry the row names the user chose in the launcher, so they cannot come from PLATFORM_NAMES. */
+function displayNameFor(tag: string): string {
+  if (tag === 'TOOLS') return launcherSettings.value.toolsName
+  if (tag === 'PORTS') return launcherSettings.value.portsName
+  return platformName(tag)
+}
+
+const allTags = computed(() => [...tags.value, ...appTags.value])
+
 const filteredTags = computed(() => {
   const q = search.value.toLowerCase()
-  if (!q) return tags.value
-  return tags.value.filter(tag =>
-    tag.toLowerCase().includes(q) || platformLabel(tag).toLowerCase().includes(q),
+  if (!q) return allTags.value
+  return allTags.value.filter(tag =>
+    tag.toLowerCase().includes(q) || displayNameFor(tag).toLowerCase().includes(q),
   )
 })
 
@@ -50,13 +60,22 @@ const alphabeticalGroups = computed<PlatformGroup[]>(() => groupPlatforms(filter
 onMounted(async () => {
   loadLauncherSettings()
   try {
-    tags.value = await getTags()
+    const [tagList, apps] = await Promise.all([getTags(), getApps()])
+    tags.value = tagList
+    appTags.value = [
+      ...(apps.tools.length ? ['TOOLS'] : []),
+      ...(apps.ports.length ? ['PORTS'] : []),
+    ]
   } finally {
     loading.value = false
   }
 })
 
 function openPlatform(tag: string) {
+  if (isAppTag(tag)) {
+    browseArt(tag)
+    return
+  }
   router.push({ name: 'platform', params: { tag } })
 }
 
@@ -169,7 +188,7 @@ function browseArt(tag: string) {
                   class="h-12 w-12 shrink-0 object-contain"
                 />
                 <Gamepad2 v-else class="h-12 w-12 shrink-0 text-muted-foreground" />
-                <span class="font-semibold">{{ platformName(tag) }}</span>
+                <span class="font-semibold">{{ displayNameFor(tag) }}</span>
               </button>
             </div>
           </div>
@@ -194,7 +213,7 @@ function browseArt(tag: string) {
                   class="h-12 w-12 shrink-0 object-contain"
                 />
                 <Gamepad2 v-else class="h-12 w-12 shrink-0 text-muted-foreground" />
-                <span class="font-semibold">{{ platformName(tag) }}</span>
+                <span class="font-semibold">{{ displayNameFor(tag) }}</span>
               </button>
             </div>
           </div>
@@ -245,30 +264,6 @@ function browseArt(tag: string) {
                 <Wallpaper class="h-5 w-5 text-accent" />
               </div>
               <span class="font-semibold">{{ $t('dashboard.wallpapers') }}</span>
-            </div>
-          </button>
-          <button
-            type="button"
-            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            @click="browseArt('TOOLS')"
-          >
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
-                <Wrench class="h-5 w-5 text-accent" />
-              </div>
-              <span class="font-semibold">{{ $t('dashboard.toolsArt', { name: launcherSettings.toolsName }) }}</span>
-            </div>
-          </button>
-          <button
-            type="button"
-            class="text-left rounded-xl border border-border bg-card p-5 transition-all duration-150 cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 hover:ring-offset-background hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            @click="browseArt('PORTS')"
-          >
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
-                <Joystick class="h-5 w-5 text-accent" />
-              </div>
-              <span class="font-semibold">{{ $t('dashboard.portsArt', { name: launcherSettings.portsName }) }}</span>
             </div>
           </button>
         </div>
