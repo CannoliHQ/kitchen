@@ -256,7 +256,7 @@ function browseArt(tag: string) {
               <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
                 <Wrench class="h-5 w-5 text-accent" />
               </div>
-              <span class="font-semibold">{{ launcherSettings.toolsName || $t('dashboard.toolsArt') }}</span>
+              <span class="font-semibold">{{ $t('dashboard.toolsArt', { name: launcherSettings.toolsName }) }}</span>
             </div>
           </button>
           <button
@@ -268,7 +268,7 @@ function browseArt(tag: string) {
               <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-muted">
                 <Joystick class="h-5 w-5 text-accent" />
               </div>
-              <span class="font-semibold">{{ launcherSettings.portsName || $t('dashboard.portsArt') }}</span>
+              <span class="font-semibold">{{ $t('dashboard.portsArt', { name: launcherSettings.portsName }) }}</span>
             </div>
           </button>
         </div>
