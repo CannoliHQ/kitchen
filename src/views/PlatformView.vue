@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { uploadFiles } from '@/api/client'
-import { platformName, supportsFbneoSamples, isAppTag } from '@/api/platforms'
+import { platformName, supportsFbneoSamples, isAppTag, isGamesOnlyTag } from '@/api/platforms'
 import { useLauncherSettings } from '@/composables/useLauncherSettings'
 import AppsTab from '@/components/platform/AppsTab.vue'
 import Dropdown from '@/components/ui/Dropdown.vue'
@@ -34,8 +34,12 @@ const displayName = computed(() => {
   return platformName(props.tag)
 })
 
+const isGamesOnly = computed(() => isGamesOnlyTag(props.tag))
+const showTabs = computed(() => !isGamesOnly.value)
+
 const activeTab = computed<TabKey>(() => {
   if (isApps.value) return 'apps'
+  if (isGamesOnly.value) return 'games'
   const t = TAB_KEYS.includes(props.tab as TabKey) ? (props.tab as TabKey) : 'games'
   return t === 'samples' && !supportsFbneoSamples(props.tag) ? 'games' : t
 })
@@ -71,7 +75,7 @@ const tabs = computed(() => {
 })
 
 function selectTab(tab: TabKey) {
-  if (isApps.value) return
+  if (isApps.value || isGamesOnly.value) return
   if (tab === 'games') {
     router.replace({ name: 'platform', params: { tag: props.tag } })
   } else if (tab === 'overlays') {
@@ -177,7 +181,7 @@ const actionItems = computed<DropdownItem[]>(() => {
     </div>
     <p v-if="bulkArtError" class="text-sm text-destructive">{{ bulkArtError }}</p>
 
-    <div class="sm:hidden">
+    <div v-if="showTabs" class="sm:hidden">
       <select
         :value="activeTab"
         class="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-base font-medium"
@@ -187,7 +191,7 @@ const actionItems = computed<DropdownItem[]>(() => {
       </select>
     </div>
 
-    <div class="hidden sm:flex items-center gap-1 border-b border-border">
+    <div v-if="showTabs" class="hidden sm:flex items-center gap-1 border-b border-border">
       <button
         v-for="t in tabs"
         :key="t.key"

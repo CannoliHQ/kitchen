@@ -41,6 +41,7 @@ export const PLATFORM_NAMES: Record<string, string> = {
   DOS: 'DOS',
   SCUMMVM: 'ScummVM',
   AMIGA: 'Amiga',
+  PC: 'PC',
   PICO8: 'PICO-8',
   PS2: 'PlayStation 2',
   GC: 'GameCube',
@@ -63,7 +64,7 @@ const PLATFORM_GROUPS: Record<string, string[]> = {
   SNK: ['NEOGEO', 'NGP', 'NGPC'],
   Bandai: ['WS', 'WSC'],
   Arcade: ['MAME', 'FBN'],
-  Computer: ['DOS', 'SCUMMVM', 'AMIGA'],
+  Computer: ['DOS', 'SCUMMVM', 'AMIGA', 'PC'],
   Other: ['COLECOVISION', 'VECTREX', 'INTELLIVISION', 'PICO8'],
   'Android Apps': ['TOOLS', 'PORTS'],
 }
@@ -94,10 +95,13 @@ export function groupPlatforms(tags: string[], alphabetical = false): PlatformGr
   return groups
 }
 
-/** Returns the path to a platform icon SVG, or undefined if unknown. App tags have no SVG and render a lucide icon instead. */
+/** Tags whose icon is not an SVG. PC comes from a raster source with no vector original. */
+const ICON_EXT: Record<string, string> = { PC: 'png' }
+
+/** Returns the path to a platform icon, or undefined if there is none. App tags fall through to a generic icon. */
 export function platformIcon(tag: string): string | undefined {
   if (isAppTag(tag)) return undefined
-  if (PLATFORM_NAMES[tag]) return `/platforms/${tag}.svg`
+  if (PLATFORM_NAMES[tag]) return `/platforms/${tag}.${ICON_EXT[tag] ?? 'svg'}`
   return undefined
 }
 
@@ -114,6 +118,13 @@ export const APP_TAGS = ['TOOLS', 'PORTS'] as const
 
 export function isAppTag(tag: string): boolean {
   return (APP_TAGS as readonly string[]).includes(tag)
+}
+
+/** Tags whose only manageable content is the games themselves, so the platform page drops its tab bar. */
+const GAMES_ONLY_TAGS = ['PC']
+
+export function isGamesOnlyTag(tag: string): boolean {
+  return GAMES_ONLY_TAGS.includes(tag)
 }
 
 const FBNEO_SAMPLE_TAGS = ['FBN']
