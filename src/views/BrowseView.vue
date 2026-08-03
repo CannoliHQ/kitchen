@@ -14,7 +14,7 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import Breadcrumbs, { type Crumb } from '@/components/layout/Breadcrumbs.vue'
 import GamePickerDialog from '@/components/file/GamePickerDialog.vue'
 import ShaderUploadDialog from '@/components/file/ShaderUploadDialog.vue'
-import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, FolderUp, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, Image, Search, Gamepad2, XCircle, Ban, Loader2, Download, Eye } from 'lucide-vue-next'
+import { ArrowLeft, Upload, File as FileIcon, Folder, FolderPlus, FolderUp, CheckCircle, Trash2, MoveRight, Pencil, ChevronRight, ImagePlus, XCircle, Ban, Loader2, Download, Eye } from 'lucide-vue-next'
 
 const props = defineProps<{
   resource: string
