@@ -190,14 +190,14 @@ const renameTarget = computed(() => {
 })
 
 async function onRename(newName: string) {
-  const t = renameTarget.value
-  if (!t) return
+  const target = renameTarget.value
+  if (!target) return
   try {
-    if (t.kind === 'game') {
-      await renameGame(props.tag, t.gameId, newName)
+    if (target.kind === 'game') {
+      await renameGame(props.tag, target.gameId, newName)
     } else {
-      const parentPath = t.folderPath.split('/').slice(0, -1).join('/')
-      await moveFile('roms', [props.tag, ...t.folderPath.split('/')], [props.tag, parentPath, newName].filter(Boolean).join('/'))
+      const parentPath = target.folderPath.split('/').slice(0, -1).join('/')
+      await moveFile('roms', [props.tag, ...target.folderPath.split('/')], [props.tag, parentPath, newName].filter(Boolean).join('/'))
     }
     await load()
   } catch {
@@ -346,7 +346,7 @@ onBeforeUnmount(() => {
     <NewFolderDialog v-if="showNewFolder" @close="showNewFolder = false" @create="onCreateFolder" />
     <MoveDialog v-if="movePromptOpen" :tag="props.tag" :folders="allFolders" :count="selectedCount" :moving-folders="[...selectedFolderPaths]" @close="movePromptOpen = false" @move="onMove" />
     <RenameDialog v-if="renamePromptOpen && renameTarget" :current-name="renameTarget.name" @close="renamePromptOpen = false" @rename="onRename" />
-    <Modal v-if="deletePromptOpen" :title="$t('platform.deleteTitle', selectedCount, { n: selectedCount })" @close="deletePromptOpen = false">
+    <Modal v-if="deletePromptOpen" :title="$t('platform.deleteTitle', { n: selectedCount }, selectedCount)" @close="deletePromptOpen = false">
       <p class="text-sm text-foreground/80">{{ $t('platform.deleteBody') }}</p>
       <template #footer>
         <Button variant="ghost" @click="deletePromptOpen = false">{{ $t('common.cancel') }}</Button>
