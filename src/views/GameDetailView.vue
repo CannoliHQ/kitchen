@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { gameArtBlob, uploadGameArt, deleteGameArt, deleteGame, getGame, getGames, moveGame, renameGame, type GameDetail } from '@/api/client'
 import { platformName } from '@/api/platforms'
@@ -27,27 +27,35 @@ const TAB_KEYS: readonly TabKey[] = ['rom', 'saves', 'states', 'guides', 'cheats
 const props = defineProps<{ tag: string; id: string; tab?: string }>()
 const romId = computed(() => Number(props.id))
 const router = useRouter()
+const route = useRoute()
 const { t } = useI18n()
 
 const game = ref<GameDetail | null>(null)
 
 function backRoute() {
   const folder = game.value?.folder
-  if (folder) return { name: 'platform-folder', params: { tag: props.tag, folder } }
-  return { name: 'platform', params: { tag: props.tag } }
+  // The list page number rides along on the detail route so returning does not reset it to one.
+  const query = route.query.page ? { page: route.query.page } : {}
+  if (folder) return { name: 'platform-folder', params: { tag: props.tag, folder }, query }
+  return { name: 'platform', params: { tag: props.tag }, query }
 }
 
 const crumbs = computed<Crumb[]>(() => {
+  // Same page number the back path carries, so either route home lands where you left off.
+  const query = route.query.page ? { page: route.query.page } : {}
   const items: Crumb[] = [
     { label: 'Platforms', to: { name: 'dashboard' } },
-    { label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag } } },
+    { label: platformName(props.tag), to: { name: 'platform', params: { tag: props.tag }, query } },
   ]
   const folder = game.value?.folder
   if (folder) {
     const parts = folder.split('/').filter(Boolean)
     parts.forEach((part, i) => {
       const path = parts.slice(0, i + 1).join('/')
-      items.push({ label: part, to: { name: 'platform-folder', params: { tag: props.tag, folder: path } } })
+      items.push({
+        label: part,
+        to: { name: 'platform-folder', params: { tag: props.tag, folder: path }, query },
+      })
     })
   }
   items.push({ label: game.value?.displayName ?? '' })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { gameArtBlob, type GameRow } from '@/api/client'
+import { apiPathBlob, type GameRow } from '@/api/client'
 import { coverColor } from '@/lib/coverColor'
 
 const props = defineProps<{ tag: string; game: GameRow }>()
@@ -13,20 +13,27 @@ function setArt(url: string | null) {
   artSrc.value = url
 }
 
+// Covers a ~200px card at 2x. Full-size art is a couple of MB each, which saturates the connection
+// and stalls the main thread decoding it; the server serves a cached downscale at this width.
+const THUMB_WIDTH = 400
+
 async function loadArt() {
-  if (!props.game.hasArt) {
+  const url = props.game.artUrl
+  if (!props.game.hasArt || !url) {
     setArt(null)
     return
   }
   try {
-    setArt(await gameArtBlob(props.tag, props.game.id))
+    // artUrl already carries the cache-busting ?v= token, so this has to append rather than assume.
+    const sep = url.includes('?') ? '&' : '?'
+    setArt(await apiPathBlob(`${url}${sep}w=${THUMB_WIDTH}`))
   } catch {
     setArt(null)
   }
 }
 
 onMounted(loadArt)
-watch(() => [props.game.id, props.game.hasArt], loadArt)
+watch(() => [props.game.id, props.game.hasArt, props.game.artUrl], loadArt)
 onBeforeUnmount(() => {
   if (artSrc.value) URL.revokeObjectURL(artSrc.value)
 })

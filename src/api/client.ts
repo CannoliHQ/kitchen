@@ -143,8 +143,6 @@ export interface GameRow {
   sortKey: string
   path: string
   folder: string
-  size: number
-  modified: number
   hasArt: boolean
   artUrl?: string
   savesCount: number
@@ -166,6 +164,10 @@ export interface PlatformGames {
 export interface GameDetail extends GameRow {
   platform: string
   platformDisplayName: string
+  /** Detail-only. The list omits these because nothing renders them there and each one costs a
+   *  filesystem stat per game, which does not scale to a large library. */
+  size: number
+  modified: number
 }
 
 export async function getGames(tag: string): Promise<PlatformGames> {
@@ -199,6 +201,15 @@ export interface GameRomFile {
 
 export async function gameArtBlob(tag: string, id: number): Promise<string | null> {
   const res = await request(`${gameBase(tag, id)}/art`)
+  if (!res.ok) return null
+  return URL.createObjectURL(await res.blob())
+}
+
+/** Fetch an already-resolved, percent-encoded api path as a blob. Caller must revoke the url.
+ *  Game lists carry artUrl so covers skip the per-game art lookup, which costs a full directory
+ *  listing on the device and does not scale past a few hundred games. */
+export async function apiPathBlob(path: string): Promise<string | null> {
+  const res = await request(path)
   if (!res.ok) return null
   return URL.createObjectURL(await res.blob())
 }

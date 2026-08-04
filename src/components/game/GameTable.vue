@@ -14,46 +14,18 @@ defineProps<{
   selectedGameIds?: Set<number>
   selectedFolderPaths?: Set<string>
 }>()
-const emit = defineEmits<{
-  open: [id: number]
+// Press/selection behaviour is owned by useCardSelection in the parent, so the table and the grid
+// cannot drift apart. This component only reports the raw interactions.
+defineEmits<{
   sort: [key: string]
-  'open-folder': [path: string]
-  'toggle-game': [id: number]
-  'toggle-folder': [path: string]
-  'long-press-game': [id: number]
-  'long-press-folder': [path: string]
+  'press-game': [id: number, ev: Event]
+  'click-game': [id: number, ev: Event]
+  'press-folder': [path: string, ev: Event]
+  'click-folder': [path: string, ev: Event]
+  'cancel-press': []
 }>()
 
 const { t } = useI18n()
-
-const LONG_PRESS_MS = 450
-let pressTimer: number | null = null
-let pressFired = false
-
-function cancelPress() {
-  if (pressTimer !== null) {
-    clearTimeout(pressTimer)
-    pressTimer = null
-  }
-}
-function startPressGame(id: number) {
-  cancelPress()
-  pressTimer = window.setTimeout(() => {
-    pressFired = true
-    emit('long-press-game', id)
-  }, LONG_PRESS_MS)
-}
-function startPressFolder(path: string) {
-  cancelPress()
-  pressTimer = window.setTimeout(() => {
-    pressFired = true
-    emit('long-press-folder', path)
-  }, LONG_PRESS_MS)
-}
-function consumeFired(): boolean {
-  if (pressFired) { pressFired = false; return true }
-  return false
-}
 
 function formatPlayed(ms: number | null | undefined) {
   if (!ms) return t('platform.playedNever')
@@ -98,11 +70,11 @@ const columns = computed<{ key: string; label: string; align: string }[]>(() => 
           :key="'folder:' + folder"
           class="cursor-pointer select-none"
           :class="selectMode && selectedFolderPaths?.has(folder) ? 'bg-accent/15' : 'hover:bg-muted/50'"
-          @click="consumeFired() ? null : (selectMode ? emit('toggle-folder', folder) : emit('open-folder', folder))"
-          @pointerdown="startPressFolder(folder)"
-          @pointerup="cancelPress"
-          @pointerleave="cancelPress"
-          @pointercancel="cancelPress"
+          @click="$emit('click-folder', folder, $event)"
+          @pointerdown="$emit('press-folder', folder, $event)"
+          @pointerup="$emit('cancel-press')"
+          @pointerleave="$emit('cancel-press')"
+          @pointercancel="$emit('cancel-press')"
           @contextmenu.prevent
         >
           <td v-if="selectMode" class="px-3 py-2.5 text-center">
@@ -126,11 +98,11 @@ const columns = computed<{ key: string; label: string; align: string }[]>(() => 
           :key="g.id"
           class="cursor-pointer select-none"
           :class="selectMode && selectedGameIds?.has(g.id) ? 'bg-accent/15' : [idx % 2 === 1 ? 'bg-muted/20' : '', 'hover:bg-muted/50']"
-          @click="consumeFired() ? null : (selectMode ? emit('toggle-game', g.id) : emit('open', g.id))"
-          @pointerdown="startPressGame(g.id)"
-          @pointerup="cancelPress"
-          @pointerleave="cancelPress"
-          @pointercancel="cancelPress"
+          @click="$emit('click-game', g.id, $event)"
+          @pointerdown="$emit('press-game', g.id, $event)"
+          @pointerup="$emit('cancel-press')"
+          @pointerleave="$emit('cancel-press')"
+          @pointercancel="$emit('cancel-press')"
           @contextmenu.prevent
         >
           <td v-if="selectMode" class="px-3 py-2.5 text-center">

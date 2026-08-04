@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { getGames, uploadFiles, createFolder, moveGame, moveFile, renameGame, deleteGame, deleteFile, type GameRow } from '@/api/client'
 import Button from '@/components/ui/Button.vue'
@@ -56,21 +56,33 @@ const filtered = computed(() => {
 
 const gridRef = ref<HTMLElement | null>(null)
 const pageSize = ref(24)
-const VIEWPORT_RESERVED_PX = 280
+// Only the pager and the page's bottom padding sit below the grid, and both are fixed height.
+// Everything above it (header, tabs, breadcrumb, folder tiles, heading) varies per platform and
+// is measured instead, so pages fill the screen rather than assuming one worst-case layout.
+const PAGER_RESERVED_PX = 56
 
 function recomputePageSize() {
   const el = gridRef.value
   if (!el || el.children.length === 0) return
   const firstChild = el.children[0] as HTMLElement
-  const cardWidth = firstChild.offsetWidth
-  const cardHeight = firstChild.offsetHeight
+  // offsetWidth/offsetHeight are rounded to whole pixels. auto-fill columns are fractional, so a
+  // rounded-up card width makes the division land just under the true column count and floor()
+  // drops a whole column, leaving the last row short. Fractional rects avoid that.
+  const rect = firstChild.getBoundingClientRect()
+  const cardWidth = rect.width
+  const cardHeight = rect.height
   if (cardWidth <= 0 || cardHeight <= 0) return
   const style = getComputedStyle(el)
-  const gap = parseFloat(style.rowGap) || 0
+  const rowGap = parseFloat(style.rowGap) || 0
+  const colGap = parseFloat(style.columnGap) || rowGap
   const gridWidth = el.clientWidth
-  const cols = Math.max(1, Math.floor((gridWidth + gap) / (cardWidth + gap)))
-  const availableHeight = window.innerHeight - VIEWPORT_RESERVED_PX
-  const rows = Math.max(1, Math.floor((availableHeight + gap) / (cardHeight + gap)))
+  // The true column count is an integer, so round rather than floor to absorb residual error.
+  const cols = Math.max(1, Math.round((gridWidth + colGap) / (cardWidth + colGap)))
+  // Document-relative so the result does not change as the user scrolls.
+  const gridTop = el.getBoundingClientRect().top + window.scrollY
+  const availableHeight = window.innerHeight - gridTop - PAGER_RESERVED_PX
+  // Half a pixel of slack so a fractional card height cannot cost a whole row.
+  const rows = Math.max(1, Math.floor((availableHeight + rowGap + 0.5) / (cardHeight + rowGap)))
   pageSize.value = cols * rows
 }
 
@@ -90,7 +102,17 @@ watch(gridRef, el => {
   nextTick(recomputePageSize)
 })
 
-const page = ref(1)
+// Kept in the url so returning from a game lands on the page you left, and so a reload or a shared
+// link does too. The component itself is unmounted on navigation, so local state cannot survive.
+const route = useRoute()
+const page = ref(Math.max(1, Number(route.query.page) || 1))
+
+watch(page, p => {
+  const query = { ...route.query }
+  if (p > 1) query.page = String(p)
+  else delete query.page
+  router.replace({ query })
+})
 const sortKey = ref<string>('title')
 const sortDir = ref<1 | -1>(1)
 
@@ -162,8 +184,6 @@ const {
   selectedFolderPaths,
   selectedCount,
   toggleSelectMode,
-  toggleGame,
-  toggleFolder,
   cancelPress,
   startPressGame,
   startPressFolder,
@@ -312,7 +332,9 @@ function handleFiles(event: Event) {
 }
 
 function openGame(id: number) {
-  router.push(`/platform/${encodeURIComponent(props.tag)}/game/${id}`)
+  // Carried through so the detail view can send you back to the page you came from.
+  const query = page.value > 1 ? { page: String(page.value) } : undefined
+  router.push({ path: `/platform/${encodeURIComponent(props.tag)}/game/${id}`, query })
 }
 
 function triggerNewFolder() {
@@ -449,8 +471,8 @@ onBeforeUnmount(() => {
             :key="'folder:' + folderPath"
             class="relative text-left transition-transform select-none"
             :class="!selectMode ? 'hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40' : selectedFolderPaths.has(folderPath) ? 'ring-2 ring-accent rounded-lg' : ''"
-            @click="handleFolderClick(folderPath)"
-            @pointerdown="startPressFolder(folderPath)"
+            @click="handleFolderClick(folderPath, $event)"
+            @pointerdown="startPressFolder(folderPath, $event)"
             @pointerup="cancelPress"
             @pointerleave="cancelPress"
             @pointercancel="cancelPress"
@@ -479,8 +501,8 @@ onBeforeUnmount(() => {
             :key="game.id"
             class="relative text-left transition-transform select-none"
             :class="!selectMode ? 'hover:-translate-y-1 hover:shadow-lg hover:shadow-black/40' : selectedGameIds.has(game.id) ? 'ring-2 ring-accent rounded-sm' : ''"
-            @click="handleGameClick(game.id)"
-            @pointerdown="startPressGame(game.id)"
+            @click="handleGameClick(game.id, $event)"
+            @pointerdown="startPressGame(game.id, $event)"
             @pointerup="cancelPress"
             @pointerleave="cancelPress"
             @pointercancel="cancelPress"
@@ -507,13 +529,12 @@ onBeforeUnmount(() => {
       :select-mode="selectMode"
       :selected-game-ids="selectedGameIds"
       :selected-folder-paths="selectedFolderPaths"
-      @open="openGame"
       @sort="setSort"
-      @open-folder="openFolder"
-      @toggle-game="toggleGame"
-      @toggle-folder="toggleFolder"
-      @long-press-game="id => { if (!selectMode) selectMode = true; toggleGame(id) }"
-      @long-press-folder="path => { if (!selectMode) selectMode = true; toggleFolder(path) }"
+      @click-game="handleGameClick"
+      @press-game="startPressGame"
+      @click-folder="handleFolderClick"
+      @press-folder="startPressFolder"
+      @cancel-press="cancelPress"
     />
 
     <div v-if="!loading && !error && pageCount > 1" class="flex items-center justify-center gap-3 pt-1">
